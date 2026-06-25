@@ -5,6 +5,47 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-25 — Officiel 5-moduls-model + database live
+
+**Stor ændring:** Kunden leverede den autoritative læreplan — den MODERNISEREDE
+køreuddannelse gældende 1.7.2026. Den er modulopbygget, ikke lektion-for-lektion
+som mit udkast. Hele datamodellen er skrevet om efter den.
+
+**Kategori B = 5 moduler, 30 teori + 24 praksis = 54 lektioner:**
+- M1 Grundlæggende trafikforståelse (7 teori, 0 praksis)
+- M2 Bilen og grundlæggende manøvrer (5 teori, 3 praksis — manøvrebane)
+- M3 Kørsel i trafik (8 teori, 6 praksis — vej)
+- M4 Kompleks trafik (9 teori, 6 praksis — vej)
+- M5 Køreteknik og prøveforberedelse (1 teori, 9 praksis — glatbane/vej)
+
+**Regelmodel (afløser tidligere "porte"-graf):**
+- Moduler er strengt sekventielle (M+1 åbner når M er godkendt af lærer).
+- Teori-før-praksis i hvert modul (praksis kan først bookes når teorien er taget).
+- Selvstudium ≤ 7 lektioner; maks. 8 lektioner/dag, heraf ≤ 3 praktiske.
+- Krav uden for moduler: førstehjælp (kursus), teoriprøve, praktisk prøve.
+
+**Skema-ændringer:** `modules` har nu lektionstal + venues + topics; nye tabeller
+`lesson_progress`, `additional_requirements`, `enrollment_requirements`. Bookinger
+peger på en konkret lektion. Triggere: seed af forløb ved enrollment, modul-advance
+ved godkendelse, og booking→lesson-statussync (security definer).
+
+**Database er nu LIVE:** alle 4 migrations pushet til Supabase (region
+aws-1-eu-central-1). Verificeret: 30+24=54 lektioner + 3 krav seedet korrekt.
+
+**Bøvl undervejs (noteret så vi ikke gentager det):**
+- Pooler-host: brugeren havde `aws-0-<region>` som placeholder i `SUPABASE_DB_URL`.
+  Rigtig host var `aws-1-eu-central-1`. Kopiér ALTID strengen fra dashboardets
+  "Connect"-knap frem for at bygge den fra skabelon.
+- `supabase gen types --db-url` kræver Docker (postgres-meta i container). Uden
+  Docker er typerne i database.types.ts håndskrevet og holdes manuelt på linje
+  med migrations (eller regenereres når Docker/SUPABASE_ACCESS_TOKEN er der).
+
+### Næste
+Frontend: elevens side (forløb som tidslinje + booking) eller lærerens side
+(elevdatabase + afkrydsning + tilgængelighed).
+
+---
+
 ## 2026-06-25 — ⚠️ Sikkerhedshændelse: lækket service_role-nøgle
 
 **Hvad skete der:** I commit `bda1c93` blev `.env.example` committet med RIGTIGE

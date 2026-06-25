@@ -1,73 +1,54 @@
 -- ============================================================================
 -- Læreplan: Kategori B (personbil) — central reference-data
 -- ============================================================================
--- ⚠️  UDKAST: rækkefølge, varigheder og porte er en realistisk men FORELØBIG
---     model. Skal verificeres mod den officielle undervisningsplan til kat. B
---     før produktion. Strukturen (parallelle spor + porte) er den endelige.
+-- Gældende fra 1.7.2026 (Bek. 1150/1151 af 26/09/2025 + Færdselsstyrelsens
+-- undervisningsplan for kategori B). 5 moduler: 30 teori + 24 praksis = 54.
 --
--- Spor:
---   theory    -> afkrydses af lærer (typisk hold)
---   practical -> eleven booker køretime (1-til-1)
---   event     -> lærer opretter event (manøvrebane / glatbane / førstehjælp)
---
--- Porte (prerequisites): et modul åbner først når ALLE dets forudsætninger er
---   afkrydset. Teori-sporet løber sekventielt; hver køretime er gated af både
---   forrige køretime og et teorimodul -> "parallelle spor med porte".
+-- Lektionstal pr. modul er fra de officielle kilder. Modultitler/-beskrivelser
+-- er vejledende; `topics` (delmål) udfyldes fra undervisningsplan-PDF'en senere.
 -- ============================================================================
 
-insert into categories (code, name)
-values ('B', 'Kategori B – Personbil')
+insert into categories
+  (code, name, max_selvstudium_lessons, max_lessons_per_day, max_practical_lessons_per_day, valid_from)
+values
+  ('B', 'Kategori B – Personbil', 7, 8, 3, date '2026-07-01')
 on conflict (code) do nothing;
 
 -- ---------- Moduler --------------------------------------------------------
 with cat as (select id from categories where code = 'B')
-insert into modules (category_id, track, type, name, description, duration_minutes, order_index)
-select cat.id, v.track::module_track, v.mtype::module_type, v.name, v.descr, v.dur, v.ord
+insert into modules
+  (category_id, order_index, title, description,
+   min_theory_lessons, min_practical_lessons, default_practical_venue, practical_venues)
+select cat.id, v.ord, v.title, v.descr, v.teori, v.praksis,
+       v.def_venue::practical_venue, v.venues::practical_venue[]
 from cat, (values
-  (1,  'theory',    'theory',   'Teori 1 – Grundregler og ansvar',              'Trafikkens grundregler, førerens ansvar og pligter.',        90),
-  (2,  'event',     'firstaid', 'Førstehjælp (lovpligtigt kursus)',             'Eksternt 8-timers færdselsrelateret førstehjælpskursus.',    480),
-  (3,  'theory',    'theory',   'Teori 2 – Bilens indretning og betjening',     'Betjeningsudstyr, kontrol af bilen, lys og syn.',            90),
-  (4,  'event',     'maneuver', 'Manøvrebane (lukket øvelsesplads)',            'Grundlæggende manøvrer på lukket bane før kørsel på vej.',    180),
-  (5,  'theory',    'theory',   'Teori 3 – Igangsætning og standsning',         'Manøvrer, placering og hastighed i teori.',                  90),
-  (6,  'practical', 'driving',  'Køretime 1 – Grundlæggende manøvrer',          'Første kørsel på vej i lidt trafikeret område.',             45),
-  (7,  'theory',    'theory',   'Teori 4 – Vejkryds og vigepligt',              'Kryds, vigepligt, svingning og samspil.',                    90),
-  (8,  'practical', 'driving',  'Køretime 2 – Kørsel i mindre trafik',          'Kryds og vigepligt i praksis.',                              45),
-  (9,  'theory',    'theory',   'Teori 5 – Manøvrer på vej',                    'Overhaling, vognbaneskift og placering.',                    90),
-  (10, 'practical', 'driving',  'Køretime 3 – Manøvrer og placering',           'Overhaling og placering i praksis.',                         45),
-  (11, 'theory',    'theory',   'Teori 6 – Kørsel i større trafik',             'Kørsel i tættere trafik og bymæssig kørsel.',                90),
-  (12, 'practical', 'driving',  'Køretime 4 – Større trafik',                   'Kørsel i mere trafikeret område.',                           45),
-  (13, 'event',     'skidpad',  'Køreteknisk anlæg (glatbane)',                 'Eksternt køreteknisk kursus – manøvrering under risiko.',    240),
-  (14, 'theory',    'theory',   'Teori 7 – Særlige risici, mørke og motorvej',  'Mørke, motorvej, vejr og særlige risikoforhold.',            90),
-  (15, 'practical', 'driving',  'Køretime 5 – Mørke og motorvej',               'Kørsel i mørke og på motorvej.',                             45),
-  (16, 'theory',    'theory',   'Teori 8 – Repetition og prøveforberedelse',    'Samlet repetition før teoriprøve.',                          90),
-  (17, 'practical', 'driving',  'Køretime 6 – Eksamensforberedelse',            'Afsluttende kørsel før praktisk prøve.',                     45)
-) as v(ord, track, mtype, name, descr, dur);
+  (1, 'Modul 1 – Grundlæggende trafikforståelse',
+      'Fundamentet: trafikkens grundregler, ansvar, holdning og adfærd. Ren teori før eleven kommer bag rattet.',
+      7, 0, null, array['teorilokale']),
+  (2, 'Modul 2 – Bilen og grundlæggende manøvrer',
+      'Bilens indretning, betjening og udstyr + første praktiske manøvrer på lukket øvelsesplads (manøvrebane).',
+      5, 3, 'lukket_oevelsesplads', array['teorilokale','lukket_oevelsesplads']),
+  (3, 'Modul 3 – Kørsel i trafik',
+      'Køretøjers manøvreegenskaber, trafikantadfærd og de første manøvrer på vej i mindre kompleks trafik.',
+      8, 6, 'vej', array['teorilokale','vej']),
+  (4, 'Modul 4 – Kompleks trafik',
+      'Vejforhold og kørsel i mere krævende trafik: tæt bytrafik, vognbaneskift, komplekse kryds, landevej/motorvej.',
+      9, 6, 'vej', array['teorilokale','vej']),
+  (5, 'Modul 5 – Køreteknik og prøveforberedelse',
+      'Øvelser på køreteknisk anlæg (glatbane) + samling af alle færdigheder og forberedelse til praktisk prøve.',
+      1, 9, 'koereteknisk_anlaeg', array['teorilokale','koereteknisk_anlaeg','vej'])
+) as v(ord, title, descr, teori, praksis, def_venue, venues);
 
--- ---------- Porte (prerequisites) ------------------------------------------
-with m as (
-  select mo.id, mo.order_index
-  from modules mo
-  join categories c on c.id = mo.category_id and c.code = 'B'
-)
-insert into module_prerequisites (module_id, prerequisite_module_id)
-select child.id, parent.id
-from (values
-  -- (modul, forudsætning) via order_index
-  (3,1),                       -- Teori 2 efter Teori 1
-  (4,3),                       -- Manøvrebane efter Teori 2
-  (5,3),                       -- Teori 3 efter Teori 2
-  (6,4),(6,5),                 -- Køretime 1: manøvrebane + Teori 3  (porten til vej)
-  (7,5),                       -- Teori 4 efter Teori 3
-  (8,6),(8,7),                 -- Køretime 2: køretime 1 + Teori 4
-  (9,7),                       -- Teori 5 efter Teori 4
-  (10,8),(10,9),               -- Køretime 3: køretime 2 + Teori 5
-  (11,9),                      -- Teori 6 efter Teori 5
-  (12,10),(12,11),             -- Køretime 4: køretime 3 + Teori 6
-  (13,12),                     -- Glatbane efter køretime 4
-  (14,11),                     -- Teori 7 efter Teori 6
-  (15,13),(15,14),             -- Køretime 5: glatbane + Teori 7
-  (16,14),                     -- Teori 8 efter Teori 7
-  (17,15),(17,16)              -- Køretime 6: køretime 5 + Teori 8
-) as e(child_ord, parent_ord)
-join m child  on child.order_index  = e.child_ord
-join m parent on parent.order_index = e.parent_ord;
+-- ---------- Krav uden for modulerne ----------------------------------------
+with cat as (select id from categories where code = 'B')
+insert into additional_requirements (category_id, code, title, description, type, order_index)
+select cat.id, v.code, v.title, v.descr, v.rtype::requirement_type, v.ord
+from cat, (values
+  ('foerstehjaelp', 'Færdselsrelateret førstehjælp',
+   'Lovpligtigt førstehjælpskursus. Skal være gennemført før indstilling til praktisk prøve. Typisk ekstern udbyder.',
+   'kursus', 1),
+  ('teoriproeve', 'Teoriprøve',
+   'Bestås hos politiet/prøvesagkyndig.', 'proeve', 2),
+  ('praktisk-proeve', 'Praktisk prøve',
+   'Aflægges efter alle moduler er godkendt af kørelæreren.', 'proeve', 3)
+) as v(code, title, descr, rtype, ord);
