@@ -32,6 +32,37 @@ export interface Notice {
   from?: string;
 }
 
+export interface Person {
+  name: string;
+  initials: string;
+}
+
+export interface AgendaItem {
+  id: string;
+  start: string;
+  end: string;
+  venueLabel: string;
+  title: string;
+  people: Person[];
+  tone: EventTone;
+}
+
+export interface MessageItem {
+  id: string;
+  sender: string;
+  initials: string;
+  body: string;
+  createdAt: string;
+}
+
+export function initials(name?: string | null): string {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  const a = parts[0]?.[0] ?? "";
+  const b = parts.length > 1 ? parts[parts.length - 1][0] : "";
+  return (a + b).toUpperCase() || "?";
+}
+
 export interface StudentRow {
   enrollmentId: string;
   studentId: string;
@@ -58,10 +89,24 @@ function venueShort(v: PracticalVenue): string {
 
 // ── Næste 7 dage (agenda til forsiden) ────────────────────────────────────
 
-export async function getUpcoming(
+interface RawAgendaBooking {
+  id: string;
+  start_at: string;
+  end_at: string;
+  status: string;
+  enrollment: { student: { full_name: string | null } | null } | null;
+  instructor: { full_name: string | null } | null;
+  lesson: {
+    type: LessonType;
+    venue: PracticalVenue;
+    module: { title: string } | null;
+  } | null;
+}
+
+export async function getAgenda(
   userId: string,
   role: "student" | "instructor" | "admin",
-): Promise<CalEvent[]> {
+): Promise<AgendaItem[]> {
   const supabase = await createClient();
   const now = new Date();
   const in7 = new Date(now);
@@ -72,6 +117,7 @@ export async function getUpcoming(
     .select(
       `id, start_at, end_at, status,
        enrollment:enrollments!enrollment_id(student:profiles!student_id(full_name)),
+       instructor:profiles!instructor_id(full_name),
        lesson:lesson_progress!lesson_id(type, venue, module:modules!module_id(title))`,
     )
     .neq("status", "cancelled")
@@ -83,19 +129,54 @@ export async function getUpcoming(
   if (role !== "student") q = q.eq("instructor_id", userId);
 
   const { data } = await q;
-  const bookings = (data ?? []) as unknown as RawBooking[];
-  return bookings.map((b) => ({
-    id: b.id,
-    start: b.start_at,
-    end: b.end_at,
-    title:
-      role === "student"
-        ? b.lesson
-          ? venueShort(b.lesson.venue)
-          : "Køretime"
-        : (b.enrollment?.student?.full_name ?? "Elev"),
-    subtitle: b.lesson?.module?.title ?? undefined,
-    tone: b.status === "completed" ? "green" : "blue",
+  const bookings = (data ?? []) as unknown as RawAgendaBooking[];
+  return bookings.map((b) => {
+    const venueLabel = b.lesson ? venueShort(b.lesson.venue) : "Køretime";
+    const tone: EventTone = b.status === "completed" ? "green" : "blue";
+    if (role === "student") {
+      const inst = b.instructor?.full_name ?? null;
+      return {
+        id: b.id,
+        start: b.start_at,
+        end: b.end_at,
+        venueLabel,
+        title: b.lesson?.module?.title ?? "Køretime",
+        people: inst ? [{ name: inst, initials: initials(inst) }] : [],
+        tone,
+      };
+    }
+    const stud = b.enrollment?.student?.full_name ?? "Elev";
+    return {
+      id: b.id,
+      start: b.start_at,
+      end: b.end_at,
+      venueLabel,
+      title: stud,
+      people: [{ name: stud, initials: initials(stud) }],
+      tone,
+    };
+  });
+}
+
+export async function getMessages(): Promise<MessageItem[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("messages")
+    .select(`id, body, created_at, sender:profiles!sender_id(full_name)`)
+    .order("created_at", { ascending: false })
+    .limit(6);
+  const rows = (data ?? []) as unknown as {
+    id: string;
+    body: string;
+    created_at: string;
+    sender: { full_name: string | null } | null;
+  }[];
+  return rows.map((m) => ({
+    id: m.id,
+    sender: m.sender?.full_name ?? "Ukendt",
+    initials: initials(m.sender?.full_name),
+    body: m.body,
+    createdAt: m.created_at,
   }));
 }
 
@@ -199,10 +280,39 @@ export async function getInstructorDashboard(
     end: (r.end_time as string).slice(0, 5),
   }));
 
+  const { data: cancelledRaw } = await supabase
+    .from("bookings")
+    .select(
+      `start_at, enrollment:enrollments!enrollment_id(student:profiles!student_id(full_name))`,
+    )
+    .eq("instructor_id", userId)
+    .eq("status", "cancelled")
+    .order("cancelled_at", { ascending: false })
+    .limit(3);
+  const cancelled = (cancelledRaw ?? []) as unknown as {
+    start_at: string;
+    enrollment: { student: { full_name: string | null } | null } | null;
+  }[];
+
   const awaiting = enrollments.filter((e) =>
     e.module_progress.some((m) => m.status === "afventer_godkendelse"),
   ).length;
+
   const notices: Notice[] = [];
+  for (const c of cancelled) {
+    notices.push({
+      id: `cancel-${c.start_at}`,
+      tone: "warning",
+      title: `${c.enrollment?.student?.full_name ?? "En elev"} har aflyst en køretime`,
+      body: new Date(c.start_at).toLocaleString("da-DK", {
+        weekday: "long",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    });
+  }
   if (awaiting > 0)
     notices.push({
       id: "await",
@@ -213,13 +323,6 @@ export async function getInstructorDashboard(
     id: "week",
     tone: "info",
     title: `${events.length} booking${events.length === 1 ? "" : "er"} denne uge`,
-  });
-  notices.push({
-    id: "msg",
-    tone: "info",
-    title: "Beskeder",
-    body: "Beskeder fra teori- og kørelærere vises her.",
-    from: "koblop",
   });
 
   return { students, events, availability, notices };
@@ -370,13 +473,5 @@ export async function getStudentDashboard(
       body: `Teori ${current.theoryDone}/${current.theoryTotal} · Køretimer ${current.praksisDone}/${current.praksisTotal}`,
     });
   }
-  notices.push({
-    id: "msg",
-    tone: "info",
-    title: "Beskeder",
-    body: "Påmindelser og beskeder fra din kørelærer vises her.",
-    from: "koblop",
-  });
-
   return { modules, events, availability, notices };
 }

@@ -145,8 +145,10 @@ async function main() {
   ];
 
   const enrollmentByEmail = {};
+  const studentIdByEmail = {};
   for (const s of students) {
     const sid = await getOrCreateUser(users, s.email, s.name);
+    studentIdByEmail[s.email] = sid;
     await sb.from("profiles").upsert({
       id: sid,
       school_id: schoolId,
@@ -237,6 +239,54 @@ async function main() {
       start_at: at(monday, 1, 10, 0).toISOString(),
       end_at: at(monday, 1, 10, 45).toISOString(),
     });
+  }
+
+  // ── Aflyst køretime (giver en påmindelse hos kørelæreren) ────────────
+  const { data: praksis3 } = await sb
+    .from("lesson_progress")
+    .select("id")
+    .eq("enrollment_id", annaEnr)
+    .eq("module_id", moduleByOrder[2])
+    .eq("type", "praksis")
+    .eq("lesson_no", 3)
+    .single();
+  const { count: cCount } = await sb
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("lesson_id", praksis3.id);
+  if (!cCount) {
+    await sb.from("bookings").insert({
+      school_id: schoolId,
+      enrollment_id: annaEnr,
+      lesson_id: praksis3.id,
+      instructor_id: instructorId,
+      resource_id: car.id,
+      start_at: at(monday, 3, 13, 0).toISOString(),
+      end_at: at(monday, 3, 13, 45).toISOString(),
+      status: "cancelled",
+      cancelled_by: studentIdByEmail["anna@koblop.test"],
+      cancelled_at: new Date().toISOString(),
+    });
+  }
+
+  // ── Beskeder (til "Beskeder"-boksen) ─────────────────────────────────
+  const { count: mCount } = await sb
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("school_id", schoolId);
+  if (!mCount) {
+    await sb.from("messages").insert([
+      {
+        school_id: schoolId,
+        sender_id: studentIdByEmail["bo@koblop.test"],
+        body: "Kan jeg tage en ekstra teorilektion på torsdag?",
+      },
+      {
+        school_id: schoolId,
+        sender_id: studentIdByEmail["clara@koblop.test"],
+        body: "Jeg bliver desværre 10 min forsinket til næste køretime.",
+      },
+    ]);
   }
 
   console.log("\n✅ Demo-data seedet.\n");

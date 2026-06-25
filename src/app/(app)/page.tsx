@@ -4,13 +4,15 @@ import { getAuthContext } from "@/lib/auth";
 import {
   getInstructorDashboard,
   getStudentDashboard,
-  getUpcoming,
+  getAgenda,
+  getMessages,
 } from "@/lib/queries/dashboard";
 import { startOfWeek } from "@/lib/dates";
 import StudentProgressList from "@/components/StudentProgressList";
 import ModuleTimeline from "@/components/ModuleTimeline";
-import FeedBanner from "@/components/FeedBanner";
-import Upcoming from "@/components/Upcoming";
+import AgendaList from "@/components/AgendaList";
+import RemindersBox from "@/components/RemindersBox";
+import MessagesBox from "@/components/MessagesBox";
 
 function SectionHeader({ title, href }: { title: string; href?: string }) {
   return (
@@ -39,7 +41,11 @@ export default async function DashboardPage() {
 
   const weekStart = startOfWeek(new Date());
   const role = ctx.profile.role;
+  const messages = await getMessages();
+  const agenda = await getAgenda(ctx.userId, role);
 
+  let notices;
+  let sideColumn;
   if (role === "student") {
     const data = await getStudentDashboard(ctx.userId, weekStart);
     if (!data) {
@@ -49,47 +55,49 @@ export default async function DashboardPage() {
         </p>
       );
     }
-    const upcoming = await getUpcoming(ctx.userId, "student");
-    return (
-      <>
-        <FeedBanner notices={data.notices} />
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-          <section className="min-w-0">
-            <SectionHeader title="Næste 7 dage" href="/kalender" />
-            <Upcoming events={upcoming} />
+    notices = data.notices;
+    sideColumn = (
+      <section>
+        <SectionHeader title="Mit forløb" />
+        <ModuleTimeline modules={data.modules} />
+      </section>
+    );
+  } else {
+    const data = await getInstructorDashboard(ctx.userId, weekStart);
+    notices = data.notices;
+    sideColumn = (
+      <section>
+        <SectionHeader
+          title={`Aktive elever (${data.students.length})`}
+          href="/elever"
+        />
+        <StudentProgressList students={data.students} />
+      </section>
+    );
+  }
+
+  return (
+    <>
+      {/* To bokse øverst */}
+      <div className="mb-6 grid gap-4 md:grid-cols-2">
+        <RemindersBox notices={notices} />
+        <MessagesBox messages={messages} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section className="min-w-0">
+          <SectionHeader title="Næste 7 dage" href="/kalender" />
+          <AgendaList items={agenda} />
+          {role === "student" && (
             <Link
               href="/book"
               className="mt-4 inline-block rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white"
             >
               Book køretime
             </Link>
-          </section>
-          <section>
-            <SectionHeader title="Mit forløb" />
-            <ModuleTimeline modules={data.modules} />
-          </section>
-        </div>
-      </>
-    );
-  }
-
-  const { students, notices } = await getInstructorDashboard(
-    ctx.userId,
-    weekStart,
-  );
-  const upcoming = await getUpcoming(ctx.userId, role);
-  return (
-    <>
-      <FeedBanner notices={notices} />
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <section className="min-w-0">
-          <SectionHeader title="Næste 7 dage" href="/kalender" />
-          <Upcoming events={upcoming} />
+          )}
         </section>
-        <section>
-          <SectionHeader title={`Aktive elever (${students.length})`} href="/elever" />
-          <StudentProgressList students={students} />
-        </section>
+        {sideColumn}
       </div>
     </>
   );

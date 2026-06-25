@@ -5,6 +5,24 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-25 — Dashboard: agenda + Påmindelser/Beskeder-bokse
+
+Kunde-retning (inspireret af Bookings-liste-design):
+- **To bokse øverst** side om side: **Påmindelser** (afledte: aflysninger fx
+  "Anna har aflyst en køretime", elever der afventer godkendelse, ugens
+  bookinger) og **Beskeder** (fra `messages`-tabel, fx "Bo: Kan jeg tage ekstra
+  teori?").
+- **"Vertikal kalender" (AgendaList)** på forsiden: dato-chip + tid + lokation +
+  **initial-avatars** for deltagere (elev/lærer). Erstatter den simple liste.
+- Ny `messages`-tabel (+ RLS + seed) driver Beskeder-boksen. `Avatar`-komponent
+  (initialer m. farve — profilbilleder senere).
+- Booking-trigger rettet: en booking oprettet som `cancelled` markerer ikke
+  længere lektionen som planlagt.
+
+Verificeret: beskeder + aflysning seedet og læsbare; build grøn.
+
+---
+
 ## 2026-06-25 — Booking-flow + kalender på egen side
 
 **Funktioner frem for design (kundens ønske):**
