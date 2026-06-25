@@ -5,6 +5,26 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-25 — ⚠️ Sikkerhedshændelse: lækket service_role-nøgle
+
+**Hvad skete der:** I commit `bda1c93` blev `.env.example` committet med RIGTIGE
+`service_role`- og `anon`-JWT'er (de var blevet skrevet ind i template-filen i
+stedet for `.env.local`). Filen blev pushet til det offentlige repo. Årsag:
+`git add -A` + commit uden at verificere at værdierne var placeholders.
+
+**Remediation:**
+- `.env.example` nulstillet til placeholders + advarsel i filen.
+- Git-historik omskrevet (amend af tip), force-pushet → ingen reachable commit
+  indeholder nøglerne. Lokal reflog expired + gc.
+- DB-password lækkede IKKE (kun i untracket `.env.local`).
+- **Nøgler roteres i Supabase (JWT secret) — gammel commit kan stadig hentes via
+  SHA på GitHub indtil GC, så rotation er det egentlige fix.**
+
+**Læring:** Skriv aldrig rigtige nøgler i `.env.example`. Tilføj evt. en
+pre-commit secret-scan (gitleaks) før vi går videre.
+
+---
+
 ## 2026-06-25 — Fundament & scaffolding
 
 ### Idé
