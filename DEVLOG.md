@@ -21,7 +21,7 @@ next/font/local → `--font-excon`). Komponent: `src/components/Logo.tsx`.
 - Data-queries (`lib/queries/dashboard.ts`) mod live DB via RLS.
 - **Demo-seed** (`scripts/seed-demo.mjs`, `npm run seed:demo`): skole, kørelærer,
   3 elever m. forløb, tilgængelighed (man-fre 8-16) og en booking. Idempotent.
-  Login: laerer@driwe.test / anna|bo|clara@driwe.test — kode `Driwe1234!`.
+  Login: laerer@koblop.test / anna|bo|clara@koblop.test — kode `123!`.
 
 **Verificeret:** typecheck + `next build` grønt; smoke-test: /login=200, /=307→/login.
 

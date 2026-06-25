@@ -8,8 +8,8 @@ type Mode = "password" | "magic";
 
 // Demo-konti fra seed-scriptet (npm run seed:demo). Kun til demo/test.
 const DEMO = {
-  laerer: { email: "laerer@driwe.test", password: "Driwe1234!" },
-  elev: { email: "anna@driwe.test", password: "Driwe1234!" },
+  laerer: { email: "laerer@koblop.test", password: "123!" },
+  elev: { email: "anna@koblop.test", password: "123!" },
 };
 
 export default function LoginPage() {

@@ -22,11 +22,24 @@ const sb = createClient(
   { auth: { persistSession: false, autoRefreshToken: false } },
 );
 
-const PASSWORD = "Driwe1234!";
+const PASSWORD = "123!";
+const INSTRUCTOR_EMAIL = "laerer@koblop.test";
 
-async function getOrCreateUser(email, fullName) {
-  const { data: list } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const existing = list?.users.find((u) => u.email === email);
+// Gamle demo-konti der skal fjernes, så de ikke optræder dobbelt i elevlisten.
+const LEGACY_EMAILS = [
+  "laerer@driwe.test",
+  "anna@driwe.test",
+  "bo@driwe.test",
+  "clara@driwe.test",
+];
+
+async function listAllUsers() {
+  const { data } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  return data?.users ?? [];
+}
+
+async function getOrCreateUser(users, email, fullName) {
+  const existing = users.find((u) => u.email === email);
   if (existing) return existing.id;
   const { data, error } = await sb.auth.admin.createUser({
     email,
@@ -46,6 +59,17 @@ function at(monday, dayOffset, h, m) {
 }
 
 async function main() {
+  let users = await listAllUsers();
+
+  // ── Ryd gamle konti (cascade fjerner profil/forløb/bookinger) ─────────
+  for (const u of users) {
+    if (LEGACY_EMAILS.includes(u.email)) {
+      await sb.auth.admin.deleteUser(u.id);
+      console.log("Ryddet gammel konto:", u.email);
+    }
+  }
+  users = await listAllUsers();
+
   // ── Skole ────────────────────────────────────────────────────────────
   let { data: school } = await sb
     .from("schools")
@@ -71,13 +95,13 @@ async function main() {
   const categoryId = cat.id;
 
   // ── Kørelærer ────────────────────────────────────────────────────────
-  const instructorId = await getOrCreateUser("laerer@driwe.test", "Lars Lærer");
+  const instructorId = await getOrCreateUser(users, INSTRUCTOR_EMAIL, "Lars Lærer");
   await sb.from("profiles").upsert({
     id: instructorId,
     school_id: schoolId,
     role: "instructor",
     full_name: "Lars Lærer",
-    email: "laerer@driwe.test",
+    email: INSTRUCTOR_EMAIL,
   });
 
   // ── Ressource ────────────────────────────────────────────────────────
@@ -115,14 +139,14 @@ async function main() {
 
   // ── Elever + forløb ──────────────────────────────────────────────────
   const students = [
-    { email: "anna@driwe.test", name: "Anna Andersen", advance: 1 },
-    { email: "bo@driwe.test", name: "Bo Bertelsen", advance: 0 },
-    { email: "clara@driwe.test", name: "Clara Christiansen", advance: 0 },
+    { email: "anna@koblop.test", name: "Anna Andersen" },
+    { email: "bo@koblop.test", name: "Bo Bertelsen" },
+    { email: "clara@koblop.test", name: "Clara Christiansen" },
   ];
 
   const enrollmentByEmail = {};
   for (const s of students) {
-    const sid = await getOrCreateUser(s.email, s.name);
+    const sid = await getOrCreateUser(users, s.email, s.name);
     await sb.from("profiles").upsert({
       id: sid,
       school_id: schoolId,
@@ -162,21 +186,22 @@ async function main() {
   const moduleByOrder = Object.fromEntries(mods.map((m) => [m.order_index, m.id]));
 
   // ── Anna: gennemfør modul 1, åbn modul 2, tag teori i modul 2 ────────
-  const annaEnr = enrollmentByEmail["anna@driwe.test"];
+  const annaEnr = enrollmentByEmail["anna@koblop.test"];
 
-  // Modul 1: alle lektioner godkendt (modul 1 er ren teori)
   await sb
     .from("lesson_progress")
     .update({ status: "godkendt" })
     .eq("enrollment_id", annaEnr)
     .eq("module_id", moduleByOrder[1]);
-  // Modul 1 gennemført -> trigger åbner modul 2
   await sb
     .from("module_progress")
-    .update({ status: "gennemfoert", signed_off_by: instructorId, signed_off_at: new Date().toISOString() })
+    .update({
+      status: "gennemfoert",
+      signed_off_by: instructorId,
+      signed_off_at: new Date().toISOString(),
+    })
     .eq("enrollment_id", annaEnr)
     .eq("module_id", moduleByOrder[1]);
-  // Modul 2: teori gennemført (så praksis kan bookes)
   await sb
     .from("lesson_progress")
     .update({ status: "gennemfoert" })
@@ -203,23 +228,21 @@ async function main() {
     .select("id", { count: "exact", head: true })
     .eq("lesson_id", praksis1.id);
   if (!bCount) {
-    const start = at(monday, 1, 10, 0); // tirsdag 10:00
-    const end = at(monday, 1, 10, 45);
     await sb.from("bookings").insert({
       school_id: schoolId,
       enrollment_id: annaEnr,
       lesson_id: praksis1.id,
       instructor_id: instructorId,
       resource_id: car.id,
-      start_at: start.toISOString(),
-      end_at: end.toISOString(),
+      start_at: at(monday, 1, 10, 0).toISOString(),
+      end_at: at(monday, 1, 10, 45).toISOString(),
     });
   }
 
   console.log("\n✅ Demo-data seedet.\n");
   console.log("Log ind på http://localhost:3000/login");
-  console.log("  Kørelærer:  laerer@driwe.test");
-  console.log("  Elever:     anna@driwe.test / bo@driwe.test / clara@driwe.test");
+  console.log(`  Kørelærer:  ${INSTRUCTOR_EMAIL}`);
+  console.log("  Elever:     anna@koblop.test / bo@koblop.test / clara@koblop.test");
   console.log(`  Kodeord:    ${PASSWORD}\n`);
 }
 
