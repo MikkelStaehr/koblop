@@ -5,6 +5,31 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-25 — One-page dashboard + kalender + rebrand til "koblop"
+
+**Navn:** Appen hedder nu **koblop** (ikke Driwe). Logo er et wordmark, altid med
+småt, sat i brand-fonten Excon (`src/fonts/Excon_Complete`, variabel TTF via
+next/font/local → `--font-excon`). Komponent: `src/components/Logo.tsx`.
+
+**Bygget — første frontend-slice (mobile-first):**
+- Auth-context-helper (`lib/auth.ts`) + rolle-baseret forside.
+- One-page dashboard (`app/page.tsx`) med uge-navigation (?w=offset):
+  - **Kørelærer:** ugekalender (bookinger + tilgængelighed) + liste over aktive
+    elever med aktuelt modul og fremdrift.
+  - **Elev:** egen kalender + forløb som modul-tidslinje (teori/køretimer pr. modul).
+- `WeekCalendar` (client): horisontalt scrollbart uge-grid, events placeret efter tid.
+- Data-queries (`lib/queries/dashboard.ts`) mod live DB via RLS.
+- **Demo-seed** (`scripts/seed-demo.mjs`, `npm run seed:demo`): skole, kørelærer,
+  3 elever m. forløb, tilgængelighed (man-fre 8-16) og en booking. Idempotent.
+  Login: laerer@driwe.test / anna|bo|clara@driwe.test — kode `Driwe1234!`.
+
+**Verificeret:** typecheck + `next build` grønt; smoke-test: /login=200, /=307→/login.
+
+**Opfølgning:** Next 16 har omdøbt `middleware`-konventionen til `proxy` (kun en
+deprecation-warning lige nu). Booking-UI (elev opretter selv) er næste skridt.
+
+---
+
 ## 2026-06-25 — Officiel 5-moduls-model + database live
 
 **Stor ændring:** Kunden leverede den autoritative læreplan — den MODERNISEREDE
