@@ -4,27 +4,30 @@ import { getAuthContext } from "@/lib/auth";
 import {
   getInstructorDashboard,
   getStudentDashboard,
+  getUpcoming,
 } from "@/lib/queries/dashboard";
-import { startOfWeek, addDays, fmtDayMonth } from "@/lib/dates";
-import WeekCalendar from "@/components/WeekCalendar";
+import { startOfWeek } from "@/lib/dates";
 import StudentProgressList from "@/components/StudentProgressList";
 import ModuleTimeline from "@/components/ModuleTimeline";
 import FeedBanner from "@/components/FeedBanner";
+import Upcoming from "@/components/Upcoming";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ w?: string }>;
-}) {
+function SectionHeader({ title, href }: { title: string; href?: string }) {
+  return (
+    <div className="mb-2 flex items-center justify-between">
+      <h2 className="text-sm font-semibold text-neutral-700">{title}</h2>
+      {href && (
+        <Link href={href} className="text-xs text-blue-600 hover:underline">
+          Se alt →
+        </Link>
+      )}
+    </div>
+  );
+}
+
+export default async function DashboardPage() {
   const ctx = await getAuthContext();
   if (!ctx) redirect("/login");
-
-  const sp = await searchParams;
-  const offset = Number.parseInt(sp.w ?? "0", 10) || 0;
-  const weekStart = startOfWeek(addDays(new Date(), offset * 7));
-  const weekEnd = addDays(weekStart, 6);
-  const weekStartISO = weekStart.toISOString();
-  const role = ctx.profile?.role;
 
   if (!ctx.profile) {
     return (
@@ -34,30 +37,8 @@ export default async function DashboardPage({
     );
   }
 
-  const weekNav = (
-    <nav className="mt-4 flex items-center justify-center gap-3 text-sm">
-      <Link
-        href={`/?w=${offset - 1}`}
-        className="rounded-lg border border-neutral-300 px-3 py-1.5"
-      >
-        ← Forrige
-      </Link>
-      <span className="text-neutral-500">
-        {fmtDayMonth(weekStart)} – {fmtDayMonth(weekEnd)}
-        {offset !== 0 && (
-          <Link href="/?w=0" className="ml-2 text-blue-600 underline">
-            I dag
-          </Link>
-        )}
-      </span>
-      <Link
-        href={`/?w=${offset + 1}`}
-        className="rounded-lg border border-neutral-300 px-3 py-1.5"
-      >
-        Næste →
-      </Link>
-    </nav>
-  );
+  const weekStart = startOfWeek(new Date());
+  const role = ctx.profile.role;
 
   if (role === "student") {
     const data = await getStudentDashboard(ctx.userId, weekStart);
@@ -68,25 +49,23 @@ export default async function DashboardPage({
         </p>
       );
     }
+    const upcoming = await getUpcoming(ctx.userId, "student");
     return (
       <>
         <FeedBanner notices={data.notices} />
-        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <section className="min-w-0">
-            <h2 className="mb-2 text-sm font-semibold text-neutral-700">
-              Min kalender
-            </h2>
-            <WeekCalendar
-              weekStartISO={weekStartISO}
-              events={data.events}
-              availability={data.availability}
-            />
-            {weekNav}
+            <SectionHeader title="Næste 7 dage" href="/kalender" />
+            <Upcoming events={upcoming} />
+            <Link
+              href="/book"
+              className="mt-4 inline-block rounded-lg bg-black px-4 py-2.5 text-sm font-medium text-white"
+            >
+              Book køretime
+            </Link>
           </section>
           <section>
-            <h2 className="mb-2 text-sm font-semibold text-neutral-700">
-              Mit forløb
-            </h2>
+            <SectionHeader title="Mit forløb" />
             <ModuleTimeline modules={data.modules} />
           </section>
         </div>
@@ -94,30 +73,21 @@ export default async function DashboardPage({
     );
   }
 
-  const { students, events, availability, notices } =
-    await getInstructorDashboard(ctx.userId, weekStart);
+  const { students, notices } = await getInstructorDashboard(
+    ctx.userId,
+    weekStart,
+  );
+  const upcoming = await getUpcoming(ctx.userId, role);
   return (
     <>
       <FeedBanner notices={notices} />
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="min-w-0">
-          <h2 className="mb-2 text-sm font-semibold text-neutral-700">
-            Kalender
-          </h2>
-          <WeekCalendar
-            weekStartISO={weekStartISO}
-            events={events}
-            availability={availability}
-          />
-          <p className="mt-1 text-xs text-neutral-400">
-            Blå felter = din tilgængelighed · farvede blokke = bookinger
-          </p>
-          {weekNav}
+          <SectionHeader title="Næste 7 dage" href="/kalender" />
+          <Upcoming events={upcoming} />
         </section>
         <section>
-          <h2 className="mb-2 text-sm font-semibold text-neutral-700">
-            Aktive elever ({students.length})
-          </h2>
+          <SectionHeader title={`Aktive elever (${students.length})`} href="/elever" />
           <StudentProgressList students={students} />
         </section>
       </div>

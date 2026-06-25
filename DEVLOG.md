@@ -5,6 +5,26 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-25 — Booking-flow + kalender på egen side
+
+**Funktioner frem for design (kundens ønske):**
+- **Kalender flyttet til egen side** (`/kalender`) med uge-navigation + nav-punkt
+  for begge roller. Forsiden viser nu en kompakt **"Næste 7 dage"-agenda**
+  (`Upcoming`) i stedet for det store grid.
+- **Booking-flow (kernen):** eleven kan booke en køretime på `/book`.
+  - `getBookingOptions`: finder elevens aktive modul, tjekker teori-før-praksis,
+    vælger næste ledige praksislektion, og genererer ledige slots (14 dage frem)
+    ud fra lærerens tilgængelighed minus optagne tider (`instructor_busy` RPC).
+  - Server action `bookSlot`: validerer ejerskab, modulstatus, fortid og
+    lærer-konflikt, og indsætter bookingen. Booking-triggeren sætter lektionen
+    til `planlagt`.
+- **Verificeret end-to-end via RLS:** logget ind som elev → insert tilladt →
+  trigger satte lektionsstatus til `planlagt`. Build grøn.
+
+**Designgæld noteret:** kalender-grid er stadig grimt og skal redesignes senere.
+
+---
+
 ## 2026-06-25 — App-shell, navigation, feed + fuldbredde
 
 Kunde-feedback omsat:

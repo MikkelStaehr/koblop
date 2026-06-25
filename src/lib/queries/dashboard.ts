@@ -56,6 +56,49 @@ function venueShort(v: PracticalVenue): string {
         : "Teori";
 }
 
+// ── Næste 7 dage (agenda til forsiden) ────────────────────────────────────
+
+export async function getUpcoming(
+  userId: string,
+  role: "student" | "instructor" | "admin",
+): Promise<CalEvent[]> {
+  const supabase = await createClient();
+  const now = new Date();
+  const in7 = new Date(now);
+  in7.setDate(in7.getDate() + 7);
+
+  let q = supabase
+    .from("bookings")
+    .select(
+      `id, start_at, end_at, status,
+       enrollment:enrollments!enrollment_id(student:profiles!student_id(full_name)),
+       lesson:lesson_progress!lesson_id(type, venue, module:modules!module_id(title))`,
+    )
+    .neq("status", "cancelled")
+    .gte("start_at", now.toISOString())
+    .lt("start_at", in7.toISOString())
+    .order("start_at", { ascending: true });
+
+  // Kørelærer: kun egne bookinger. Elev: RLS begrænser allerede til egne.
+  if (role !== "student") q = q.eq("instructor_id", userId);
+
+  const { data } = await q;
+  const bookings = (data ?? []) as unknown as RawBooking[];
+  return bookings.map((b) => ({
+    id: b.id,
+    start: b.start_at,
+    end: b.end_at,
+    title:
+      role === "student"
+        ? b.lesson
+          ? venueShort(b.lesson.venue)
+          : "Køretime"
+        : (b.enrollment?.student?.full_name ?? "Elev"),
+    subtitle: b.lesson?.module?.title ?? undefined,
+    tone: b.status === "completed" ? "green" : "blue",
+  }));
+}
+
 // ── Kørelærerens dashboard ────────────────────────────────────────────────
 
 interface RawEnrollment {

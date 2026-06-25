@@ -58,3 +58,6 @@ export const KATEGORI_B_RULES = {
   totalTheoryLessons: 30,
   totalPracticalLessons: 24,
 } as const;
+
+// Varighed (minutter) for en praksislektion ved booking.
+export const PRAKSIS_DURATION_MIN = 45;
