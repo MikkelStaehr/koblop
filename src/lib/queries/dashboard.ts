@@ -24,6 +24,14 @@ export interface AvailabilityBand {
   end: string;
 }
 
+export interface Notice {
+  id: string;
+  tone: "info" | "success" | "warning";
+  title: string;
+  body?: string;
+  from?: string;
+}
+
 export interface StudentRow {
   enrollmentId: string;
   studentId: string;
@@ -71,6 +79,7 @@ export interface InstructorDashboard {
   students: StudentRow[];
   events: CalEvent[];
   availability: AvailabilityBand[];
+  notices: Notice[];
 }
 
 export async function getInstructorDashboard(
@@ -147,7 +156,30 @@ export async function getInstructorDashboard(
     end: (r.end_time as string).slice(0, 5),
   }));
 
-  return { students, events, availability };
+  const awaiting = enrollments.filter((e) =>
+    e.module_progress.some((m) => m.status === "afventer_godkendelse"),
+  ).length;
+  const notices: Notice[] = [];
+  if (awaiting > 0)
+    notices.push({
+      id: "await",
+      tone: "warning",
+      title: `${awaiting} elev${awaiting === 1 ? "" : "er"} afventer din godkendelse`,
+    });
+  notices.push({
+    id: "week",
+    tone: "info",
+    title: `${events.length} booking${events.length === 1 ? "" : "er"} denne uge`,
+  });
+  notices.push({
+    id: "msg",
+    tone: "info",
+    title: "Beskeder",
+    body: "Beskeder fra teori- og kørelærere vises her.",
+    from: "koblop",
+  });
+
+  return { students, events, availability, notices };
 }
 
 // ── Elevens dashboard ─────────────────────────────────────────────────────
@@ -166,6 +198,7 @@ export interface StudentDashboard {
   modules: StudentModuleRow[];
   events: CalEvent[];
   availability: AvailabilityBand[];
+  notices: Notice[];
 }
 
 interface RawStudentEnrollment {
@@ -252,5 +285,55 @@ export async function getStudentDashboard(
     }));
   }
 
-  return { modules, events, availability };
+  // Næste kommende køretime (også ud over denne uge) til feed-påmindelse.
+  const { data: nextRaw } = await supabase
+    .from("bookings")
+    .select(
+      `start_at, lesson:lesson_progress!lesson_id(venue, module:modules!module_id(title))`,
+    )
+    .eq("enrollment_id", e.id)
+    .neq("status", "cancelled")
+    .gte("start_at", new Date().toISOString())
+    .order("start_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const next = nextRaw as unknown as {
+    start_at: string;
+    lesson: { venue: PracticalVenue; module: { title: string } | null } | null;
+  } | null;
+
+  const notices: Notice[] = [];
+  if (next) {
+    const when = new Date(next.start_at).toLocaleString("da-DK", {
+      weekday: "long",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    notices.push({
+      id: "next",
+      tone: "success",
+      title: "Din næste køretime",
+      body: `${when}${next.lesson ? ` · ${venueShort(next.lesson.venue)}` : ""}`,
+    });
+  }
+  const current = modules.find((m) => m.status === "i_gang");
+  if (current) {
+    notices.push({
+      id: "current",
+      tone: "info",
+      title: `Du er i gang med ${current.title}`,
+      body: `Teori ${current.theoryDone}/${current.theoryTotal} · Køretimer ${current.praksisDone}/${current.praksisTotal}`,
+    });
+  }
+  notices.push({
+    id: "msg",
+    tone: "info",
+    title: "Beskeder",
+    body: "Påmindelser og beskeder fra din kørelærer vises her.",
+    from: "koblop",
+  });
+
+  return { modules, events, availability, notices };
 }

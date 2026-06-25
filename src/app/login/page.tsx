@@ -6,12 +6,6 @@ import Logo from "@/components/Logo";
 
 type Mode = "password" | "magic";
 
-// Demo-konti fra seed-scriptet (npm run seed:demo). Kun til demo/test.
-const DEMO = {
-  laerer: { email: "laerer@koblop.test", password: "123!" },
-  elev: { email: "anna@koblop.test", password: "123!" },
-};
-
 export default function LoginPage() {
   const supabase = createClient();
   const [mode, setMode] = useState<Mode>("password");
@@ -49,13 +43,6 @@ export default function LoginPage() {
     } else {
       await passwordLogin(email, password);
     }
-  }
-
-  async function demoLogin(role: "laerer" | "elev") {
-    const c = DEMO[role];
-    setEmail(c.email);
-    setPassword(c.password);
-    await passwordLogin(c.email, c.password);
   }
 
   return (
@@ -109,30 +96,6 @@ export default function LoginPage() {
         </button>
 
         {msg && <p className="text-sm text-neutral-700">{msg}</p>}
-
-        <div className="border-t border-neutral-200 pt-6">
-          <p className="mb-3 text-xs uppercase tracking-wide text-neutral-400">
-            Demo-login
-          </p>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => demoLogin("laerer")}
-              disabled={loading}
-              className="flex-1 rounded-xl border border-neutral-300 px-4 py-3 font-medium hover:bg-neutral-50 disabled:opacity-50"
-            >
-              Kørelærer
-            </button>
-            <button
-              type="button"
-              onClick={() => demoLogin("elev")}
-              disabled={loading}
-              className="flex-1 rounded-xl border border-neutral-300 px-4 py-3 font-medium hover:bg-neutral-50 disabled:opacity-50"
-            >
-              Elev
-            </button>
-          </div>
-        </div>
       </div>
     </main>
   );

@@ -5,6 +5,25 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-25 — App-shell, navigation, feed + fuldbredde
+
+Kunde-feedback omsat:
+1. **Fuld bredde / responsivt:** indhold er ikke længere låst til smal kolonne.
+   AppShell med max-w-7xl; kalenderen fylder bredden på desktop, scroller på mobil.
+2. **Navigation:** ny `AppShell` — sidebar på desktop, bundnav på mobil. Nav pr.
+   rolle: kørelærer (Oversigt, Elever, Hold, Indstillinger), elev (Mit forløb, Book tid).
+3. **Indstillinger:** nav-punkt + placeholder (tilgængelighed/skole/ressourcer kommer her).
+4. **Login:** demo-knapperne fjernet — rollen afgøres ved login via profilen.
+5. **Feed i toppen:** `FeedBanner` for begge roller med afledte påmindelser
+   (kørelærer: elever der afventer godkendelse, bookinger i ugen; elev: næste
+   køretime, aktuelt modul) + placeholder for beskeder fra teori-/kørelærer.
+
+**Struktur:** dashboard + nav-sider flyttet ind i en `(app)`-rutegruppe med fælles
+`layout.tsx` (auth + shell). Nye sider: /elever (rigtig liste), /hold, /indstillinger,
+/book (placeholders). Build grøn, alle ruter genereres.
+
+---
+
 ## 2026-06-25 — One-page dashboard + kalender + rebrand til "koblop"
 
 **Navn:** Appen hedder nu **koblop** (ikke Driwe). Logo er et wordmark, altid med

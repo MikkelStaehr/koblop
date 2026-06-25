@@ -65,7 +65,7 @@ export default function WeekCalendar({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
-      <div className="min-w-[640px]">
+      <div className="w-full min-w-[640px]">
         {/* Dag-overskrifter */}
         <div className="grid grid-cols-[44px_repeat(7,1fr)] border-b border-neutral-200">
           <div />
