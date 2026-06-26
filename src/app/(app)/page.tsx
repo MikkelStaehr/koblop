@@ -7,10 +7,13 @@ import {
   getAgenda,
   getMessages,
 } from "@/lib/queries/dashboard";
-import { startOfWeek } from "@/lib/dates";
+import type { AgendaItem } from "@/lib/queries/dashboard";
+import { getStudentClasses } from "@/lib/queries/classes";
+import { startOfWeek, addDays } from "@/lib/dates";
 import StudentProgressList from "@/components/StudentProgressList";
 import ModuleTimeline from "@/components/ModuleTimeline";
 import AgendaList from "@/components/AgendaList";
+import StudentClassCard from "@/components/StudentClassCard";
 import RemindersBox from "@/components/RemindersBox";
 import MessagesBox from "@/components/MessagesBox";
 
@@ -42,12 +45,15 @@ export default async function DashboardPage() {
   const weekStart = startOfWeek(new Date());
   const role = ctx.profile.role;
   const messages = await getMessages();
-  const agenda = await getAgenda(ctx.userId, role);
+  let agenda = await getAgenda(ctx.userId, role);
 
   let notices;
   let sideColumn;
   if (role === "student") {
-    const data = await getStudentDashboard(ctx.userId, weekStart);
+    const [data, classes] = await Promise.all([
+      getStudentDashboard(ctx.userId, weekStart),
+      getStudentClasses(ctx.userId),
+    ]);
     if (!data) {
       return (
         <p className="rounded-xl border border-dashed border-neutral-300 bg-white p-6 text-center text-sm text-neutral-500">
@@ -55,12 +61,41 @@ export default async function DashboardPage() {
         </p>
       );
     }
+    // Flet kommende teorigange ind i "Næste 7 dage"-agendaen.
+    const in7 = addDays(new Date(), 7).getTime();
+    const now = new Date().getTime();
+    const theoryItems: AgendaItem[] = classes.sessions
+      .filter((s) => {
+        const t = new Date(s.startsAt).getTime();
+        return t >= now && t < in7;
+      })
+      .map((s) => ({
+        id: `sess-${s.id}`,
+        start: s.startsAt,
+        end: s.endsAt,
+        venueLabel: "Teorihold",
+        title: s.topic ?? `${s.moduleTitle} · Teori ${s.lessonNo}`,
+        people: s.instructorInitials
+          ? [{ name: s.instructorName ?? "", initials: s.instructorInitials }]
+          : [],
+        tone: "amber",
+      }));
+    agenda = [...agenda, ...theoryItems].sort((a, b) =>
+      a.start.localeCompare(b.start),
+    );
+
     notices = data.notices;
     sideColumn = (
-      <section>
-        <SectionHeader title="Mit forløb" />
-        <ModuleTimeline modules={data.modules} />
-      </section>
+      <>
+        <section>
+          <SectionHeader title="Mit forløb" />
+          <ModuleTimeline modules={data.modules} />
+        </section>
+        <section className="mt-6">
+          <SectionHeader title="Mit teorihold" href="/kalender" />
+          <StudentClassCard data={classes} />
+        </section>
+      </>
     );
   } else {
     const data = await getInstructorDashboard(ctx.userId, weekStart);

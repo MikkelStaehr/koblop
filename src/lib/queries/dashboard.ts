@@ -45,6 +45,7 @@ export interface AgendaItem {
   title: string;
   people: Person[];
   tone: EventTone;
+  bookingId?: string; // sat for rigtige bookinger → kan aflyses
 }
 
 export interface MessageItem {
@@ -143,6 +144,7 @@ export async function getAgenda(
         title: b.lesson?.module?.title ?? "Køretime",
         people: inst ? [{ name: inst, initials: initials(inst) }] : [],
         tone,
+        bookingId: b.status === "booked" ? b.id : undefined,
       };
     }
     const stud = b.enrollment?.student?.full_name ?? "Elev";
@@ -154,6 +156,7 @@ export async function getAgenda(
       title: stud,
       people: [{ name: stud, initials: initials(stud) }],
       tone,
+      bookingId: b.status === "booked" ? b.id : undefined,
     };
   });
 }

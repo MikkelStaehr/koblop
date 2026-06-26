@@ -5,6 +5,190 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-26 — Onboarding: kørelæreren opretter elever
+
+Demo → reelt brugbart: kørelæreren kan nu selv oprette en elev fra `/elever`.
+
+- **Server action `createStudent`** (`lib/actions/students.ts`): opretter auth-bruger
+  (bekræftet) → profil (role=student, skole) → enrollment (kat. B). Enrollment-
+  triggeren seeder hele forløbet (5 moduler + 54 lektioner). Ruller tilbage ved fejl
+  (sletter profil + auth-bruger). Returnerer et **login-link** til eleven.
+- **UI:** "Opret elev"-formular (navn/e-mail/telefon) på `/elever`. Efter oprettelse
+  vises et delbart login-link med kopiér-knap.
+
+**Vigtigt valg — createUser frem for inviteUserByEmail:** dette projekts Auth
+afviser ikke-rigtige e-maildomæner (`.test`, `example.com`) for `invite`/
+`generateLink type=invite` (`email_address_invalid`), og vi kan ikke garantere SMTP.
+`admin.createUser({ email_confirm: true })` virker uden SMTP og uden den strikse
+domæne-validering (det er sådan seed-brugerne med `.test` blev lavet). Login-linket
+genereres med `generateLink type=magiclink` (best effort) → virker uden mail-udsendelse;
+kørelæreren deler linket. Eleven kan også bruge magisk link på login-siden.
+
+**Verificeret end-to-end mod live DB:** createUser → profil (201) → enrollment (201)
+→ trigger seedede 5 moduler + 54 lektioner; magiclink gav et brugbart action_link.
+Alt testdata (auth-bruger, profil, enrollment) ryddet op. Typecheck + lint grønne.
+
+**Næste:** når SMTP sættes op kan vi skifte til ægte invitations-mails; pt. er
+delbart link den robuste vej. Overvej også sletning/pause af elever.
+
+---
+
+## 2026-06-26 — Afbud/aflysning: kerneløkken lukket
+
+Sidste hul i kerneløkken. Både elev og kørelærer kan nu aflyse en booking.
+
+- **Server action `cancelBooking`** (`lib/actions/booking.ts`): sætter
+  `status=cancelled` + `cancelled_by/at`. Booking-triggeren reverterer lektionen
+  til `ikke_planlagt`, så tiden bliver bookbar igen.
+- **Afbudsfrist håndhævet** (bruger `schools.cancellation_window_hours`, default
+  24t): elever kan kun aflyse online uden for fristen; **staff kan aflyse når som
+  helst** (de kan rydde op tæt på tidspunktet). For sent → besked om at kontakte
+  kørelæreren.
+- **UI:** aflys-knap (to-trins "Aflys → Bekræft") på hver booking i "Næste 7
+  dage"-agendaen, for begge roller. Kun rigtige bookinger (`bookingId` sat på
+  AgendaItem, kun når status er `booked`) — teorigange og gennemførte timer kan
+  ikke aflyses herfra.
+
+**Verificeret end-to-end mod live DB:** oprettede booking → lektion blev
+`planlagt`; aflyste → trigger satte lektionen tilbage til `ikke_planlagt` med
+`scheduled_at` nulstillet. Testdata ryddet op. Typecheck + lint grønne.
+
+**Kerneløkken er nu hel:** elev booker → (evt. aflys, tid frigives) → lærer
+afholder → krydser af → modul godkendes → næste låses op.
+
+---
+
+## 2026-06-26 — Lucide-ikoner ind
+
+Erstattede de håndlavede SVG-ikoner med `lucide-react`:
+- `app-shell/Icon.tsx` mapper nu nav-ikonnavnene (grid/users/layers/settings/
+  calendar) til lucide-komponenter — hele navigationen får konsistente ikoner
+  uden ændringer andre steder.
+- `AgendaList` bruger `Clock` + `MapPin` i stedet for inline-SVG.
+
+Lucide har samme stroke-stil (1.8) som de gamle, så udseendet er konsistent.
+Typecheck + lint grønne. Fremover: brug lucide til nye ikoner frem for inline-SVG.
+
+---
+
+## 2026-06-26 — Elevens hold + kommende teorigange (+ RLS-rekursion fixet)
+
+Eleven ser nu sit teorihold tre steder:
+- **"Mit teorihold"-kort** på forsiden (sidekolonnen): holdnavn, kørelærer og de
+  næste teorigange.
+- **"Næste 7 dage"-agendaen**: teorigange flettes ind sammen med køretimer
+  (amber-tone, "Teorihold"-label).
+- **Kalenderen**: teorigange i den viste uge vises som events.
+
+Drevet af ny query `getStudentClasses` (enrollments → class_members → classes →
+class_sessions), som RLS scoper til elevens egne hold.
+
+**RLS-bug fanget og fixet (`20260626150000_teorihold_rls_fix.sql`):** de første
+hold-policyer havde uendelig rekursion (Postgres 42P17) — `classes`-policyen læste
+`class_members` og omvendt, så de kaldte hinanden i ring. Det blokerede AL
+hold-læsning for både elever og staff. Fix: parent-opslag (skole-via-hold,
+medlemskab) flyttet til `SECURITY DEFINER`-funktioner (`class_school_id`,
+`session_school_id`, `is_class_member`), så policyerne ikke længere krydser
+hinandens tabeller under RLS.
+
+**Verificeret mod live DB med ægte elev-JWT:** logget ind som Anna → læser sit
+hold + teorigange uden rekursionsfejl. Bekræftede at ingen andre rekursions-stier
+findes (øvrige opslag går kun til enrollments/profiles/modules). Testdata ryddet
+op. Typecheck + lint grønne.
+
+**Læring:** Krydsende RLS-policyer mellem to tabeller giver rekursion — brug
+SECURITY DEFINER-helpers til parent-opslag (samme mønster som `current_school_id`).
+
+---
+
+## 2026-06-26 — Teorihold: kohorte + teorigange + fremmøde
+
+Kundens model: elever knyttes til et hold (kohorte), holdet har planlagte
+teorigange, og fremmøde-afkrydsning gennemfører elevernes teorilektioner. Hold
+er et organiserings-lag oven på elever der allerede hører til skolen (onboarding
+bygges separat senere).
+
+**Nyt skema** (`20260626140000_teorihold.sql`):
+- `classes` (hold), `class_members` (forløb knyttet til hold), `class_sessions`
+  (teorigang — dækker ét modul + én teorilektion), `session_attendance`.
+- Fuld RLS: staff styrer egen skoles hold; elever læser egne (member/own).
+
+**UI/logik:**
+- `/hold`: liste + opret hold.
+- `/hold/[id]`: tilføj/fjern elever (fra skolens aktive forløb) + opret
+  teorigange (modul → teorilektion → tidspunkt/varighed/emne).
+- `/hold/[id]/session/[sid]`: fremmøde. Markér til stede → server-action
+  upserter `session_attendance` OG sætter elevens matchende teori-lektion
+  (`module_id` + `type=teori` + `lesson_no`) til `godkendt`. Fortryd reverterer.
+  Genbruger samme afkrydsnings-mekanik som lærerens elev-checklist.
+
+**Fremmøde gennemføres i action, ikke trigger** — bevidst, så logikken er
+eksplicit og fremmøde + lektionsstatus holdes i sync ét sted.
+
+**Verificeret end-to-end mod live DB:** oprettede hold → tilføjede elev →
+teorigang → fremmøde, og bekræftede at den korrekte `lesson_progress`-række
+(enrollment+modul+teori+lektion) blev `godkendt`. PostgREST-embeds (count +
+nested) returnerer forventet form. Alt testdata ryddet op og demo-data
+gendannet. Typecheck + lint grønne.
+
+**Bemærk:** et medlem kan i princippet være på flere hold (kun unik pr.
+(hold, forløb)); "ét hold pr. elev" håndhæves ikke i DB endnu. Fremmøde og
+lærerens manuelle afkrydsning rører samme lektion — sidste handling vinder.
+
+---
+
+## 2026-06-26 — Lærerens afkrydsning: progression låses op
+
+**Største hul lukket:** hele lærersiden var read-only. Kørelæreren kunne se
+elever og fremdrift, men ikke udføre kerneopgaven — krydse af. Da moduler er
+strengt sekventielle og kun låses op når læreren godkender det forrige, sad
+*alle* elever reelt fast i deres nuværende modul. Nu er afkrydsningen bygget.
+
+- **Elev-detaljeside** `/elever/[id]`: modulerne som kort med lektioner. Klik på
+  en elev i `/elever`-listen åbner den.
+- **Afkryds lektioner:** checkbox pr. lektion → `godkendt` (sætter `approved_by`
+  + `completed_at`); fortryd → tilbage til `ikke_planlagt`. Virker for både teori
+  og praksis.
+- **Godkend modul:** knap pr. modul → `gennemfoert` (sætter `signed_off_by/at`).
+  DB-triggeren `advance_modules` låser så næste modul op. "Genåbn modul" fortryder.
+- **Sikkerhed:** server actions (`lib/actions/progress.ts`) gør kun selve
+  opdateringen — RLS (`*_write_staff`) håndhæver at staff kun rører egen skoles
+  elever. Låste moduler kan ikke krydses af (UI skjuler dem).
+
+**Verificeret live mod DB:** godkendte modul 2 på et forløb → modul 3 gik
+`laast` → `i_gang` via triggeren, derefter rullet tilbage. Typecheck + lint
+grønne; begge nye ruter kompilerer (307→login uden auth).
+
+**Bemærk:** "Genåbn modul" låser ikke det næste modul igen (bevidst simpelt for
+nu). Et modul får ikke automatisk status `afventer_godkendelse` når alle lektioner
+er godkendt — læreren godkender direkte. Begge kan strammes senere.
+
+---
+
+## 2026-06-26 — Tilgængelighed: kørelæreren sætter selv sine bookbare tider
+
+**Hul lukket:** booking-motoren (`getBookingOptions`) har hele tiden læst lærerens
+`availability_rules`, men de kunne **kun** sættes via seed-scriptet. Nu kan
+kørelæreren selv styre dem fra `/indstillinger` — kerneløkken er selvbetjenende.
+
+- **`/indstillinger`** er ikke længere en placeholder: ugentligt skema (man-søn,
+  mandag-først), én tidsblok pr. dag med til/fra + start/sluttid.
+- **Server action `saveAvailability`** (`lib/actions/availability.ts`): rolle-guard
+  (instructor/admin), validerer TT:MM + start<slut, og **rewriter** lærerens regler
+  (slet egne → indsæt). RLS sikrer at man kun rører egne rækker.
+- **`AvailabilityEditor`** (client): optimistisk redigering + gem-knap, samme
+  besked-mønster som `BookingSlots`.
+- Weekday-konvertering på linje med resten: UI er mandag-først, DB er 0=søndag
+  (`dbWeekday = (mondayIndex + 1) % 7`).
+
+Verificeret: typecheck + lint grønne; ruten kompilerer (307→login for ikke-auth);
+datamapning stemmer med seed (man-fre 08-16). Booking-queryen understøtter allerede
+flere blokke pr. dag, så split-vagter kan tilføjes i UI senere uden skema-ændring.
+
+**Næste i Indstillinger:** skoleoplysninger, ressourcer (skolevogne), afbudsregler.
+
+---
+
 ## 2026-06-25 — Dashboard: agenda + Påmindelser/Beskeder-bokse
 
 Kunde-retning (inspireret af Bookings-liste-design):

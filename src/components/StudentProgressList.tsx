@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { StudentRow } from "@/lib/queries/dashboard";
 
 export default function StudentProgressList({
@@ -21,27 +22,29 @@ export default function StudentProgressList({
             ? Math.round((s.lessonsDone / s.lessonsTotal) * 100)
             : 0;
         return (
-          <li
-            key={s.enrollmentId}
-            className="rounded-xl border border-neutral-200 bg-white p-3"
-          >
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="font-medium">{s.name}</span>
-              <span className="text-xs text-neutral-500">
-                {s.lessonsDone}/{s.lessonsTotal} lektioner
-              </span>
-            </div>
-            <div className="mt-1 text-xs text-neutral-500">
-              {s.currentModule
-                ? `Modul ${s.currentModuleOrder} · ${s.currentModule}`
-                : "Forløb ikke startet / afsluttet"}
-            </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-100">
-              <div
-                className="h-full rounded-full bg-blue-500"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
+          <li key={s.enrollmentId}>
+            <Link
+              href={`/elever/${s.enrollmentId}`}
+              className="block rounded-xl border border-neutral-200 bg-white p-3 transition hover:border-neutral-300 hover:bg-neutral-50"
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-medium">{s.name}</span>
+                <span className="text-xs text-neutral-500">
+                  {s.lessonsDone}/{s.lessonsTotal} lektioner
+                </span>
+              </div>
+              <div className="mt-1 text-xs text-neutral-500">
+                {s.currentModule
+                  ? `Modul ${s.currentModuleOrder} · ${s.currentModule}`
+                  : "Forløb ikke startet / afsluttet"}
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-100">
+                <div
+                  className="h-full rounded-full bg-blue-500"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </Link>
           </li>
         );
       })}

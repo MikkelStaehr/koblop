@@ -7,6 +7,7 @@ import {
   type CalEvent,
   type AvailabilityBand,
 } from "@/lib/queries/dashboard";
+import { getStudentClasses } from "@/lib/queries/classes";
 import { startOfWeek, addDays, fmtDayMonth } from "@/lib/dates";
 import WeekCalendar from "@/components/WeekCalendar";
 
@@ -27,11 +28,31 @@ export default async function KalenderPage({
   let events: CalEvent[] = [];
   let availability: AvailabilityBand[] = [];
   if (ctx.profile?.role === "student") {
-    const d = await getStudentDashboard(ctx.userId, weekStart);
+    const [d, classes] = await Promise.all([
+      getStudentDashboard(ctx.userId, weekStart),
+      getStudentClasses(ctx.userId),
+    ]);
     if (d) {
       events = d.events;
       availability = d.availability;
     }
+    // Flet teorigange i den viste uge ind som events.
+    const weekStartMs = weekStart.getTime();
+    const weekEndMs = addDays(weekStart, 7).getTime();
+    const theoryEvents: CalEvent[] = classes.sessions
+      .filter((s) => {
+        const t = new Date(s.startsAt).getTime();
+        return t >= weekStartMs && t < weekEndMs;
+      })
+      .map((s) => ({
+        id: `sess-${s.id}`,
+        start: s.startsAt,
+        end: s.endsAt,
+        title: "Teori",
+        subtitle: s.topic ?? `${s.moduleTitle} · Teori ${s.lessonNo}`,
+        tone: "amber",
+      }));
+    events = [...events, ...theoryEvents];
   } else {
     const d = await getInstructorDashboard(ctx.userId, weekStart);
     events = d.events;

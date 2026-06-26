@@ -85,3 +85,75 @@ export async function bookSlot(
   revalidatePath("/kalender");
   return { ok: true };
 }
+
+interface RawCancelBooking {
+  id: string;
+  start_at: string;
+  status: string;
+  enrollment: { student_id: string } | null;
+  school: { cancellation_window_hours: number } | null;
+}
+
+// Aflys en booking. Elev kan kun aflyse uden for skolens frist; staff når som
+// helst. Booking-triggeren sætter lektionen tilbage til 'ikke_planlagt'.
+export async function cancelBooking(
+  bookingId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Du er ikke logget ind." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isStaff = profile?.role === "instructor" || profile?.role === "admin";
+
+  const { data: raw } = await supabase
+    .from("bookings")
+    .select(
+      `id, start_at, status,
+       enrollment:enrollments!enrollment_id(student_id),
+       school:schools!school_id(cancellation_window_hours)`,
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  const b = raw as unknown as RawCancelBooking | null;
+  if (!b) return { ok: false, error: "Booking ikke fundet." };
+  if (b.status !== "booked")
+    return { ok: false, error: "Bookingen kan ikke aflyses." };
+
+  const isOwner = b.enrollment?.student_id === user.id;
+  if (!isStaff && !isOwner)
+    return { ok: false, error: "Du kan ikke aflyse denne booking." };
+
+  // Frist gælder kun elever — staff kan aflyse når som helst.
+  if (!isStaff) {
+    const windowH = b.school?.cancellation_window_hours ?? 24;
+    const deadline = new Date(b.start_at).getTime() - windowH * 3600_000;
+    if (new Date().getTime() > deadline)
+      return {
+        ok: false,
+        error: `For sent at aflyse online — fristen er ${windowH} timer før. Kontakt din kørelærer.`,
+      };
+  }
+
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      status: "cancelled",
+      cancelled_by: user.id,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/");
+  revalidatePath("/kalender");
+  revalidatePath("/book");
+  return { ok: true };
+}

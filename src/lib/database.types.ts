@@ -370,6 +370,84 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
         Relationships: [];
       };
+      classes: {
+        Row: {
+          id: string;
+          school_id: string;
+          name: string;
+          instructor_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id: string;
+          name: string;
+          instructor_id?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["classes"]["Insert"]>;
+        Relationships: [];
+      };
+      class_members: {
+        Row: {
+          id: string;
+          class_id: string;
+          enrollment_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          class_id: string;
+          enrollment_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["class_members"]["Insert"]>;
+        Relationships: [];
+      };
+      class_sessions: {
+        Row: {
+          id: string;
+          class_id: string;
+          module_id: string;
+          lesson_no: number;
+          starts_at: string;
+          ends_at: string;
+          topic: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          class_id: string;
+          module_id: string;
+          lesson_no: number;
+          starts_at: string;
+          ends_at: string;
+          topic?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["class_sessions"]["Insert"]>;
+        Relationships: [];
+      };
+      session_attendance: {
+        Row: {
+          id: string;
+          session_id: string;
+          enrollment_id: string;
+          present: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          session_id: string;
+          enrollment_id: string;
+          present?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["session_attendance"]["Insert"]
+        >;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {

@@ -3,6 +3,7 @@ import { getAuthContext } from "@/lib/auth";
 import { getInstructorDashboard } from "@/lib/queries/dashboard";
 import { startOfWeek } from "@/lib/dates";
 import StudentProgressList from "@/components/StudentProgressList";
+import CreateStudentForm from "@/components/CreateStudentForm";
 
 export default async function EleverPage() {
   const ctx = await getAuthContext();
@@ -20,6 +21,9 @@ export default async function EleverPage() {
       <p className="mb-5 text-sm text-neutral-500">
         {students.length} aktive elever
       </p>
+      <div className="mb-6">
+        <CreateStudentForm />
+      </div>
       <StudentProgressList students={students} />
     </div>
   );
