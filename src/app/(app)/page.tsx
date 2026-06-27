@@ -14,6 +14,7 @@ import StudentProgressList from "@/components/StudentProgressList";
 import ModuleTimeline from "@/components/ModuleTimeline";
 import AgendaList from "@/components/AgendaList";
 import StudentClassCard from "@/components/StudentClassCard";
+import StudentRequirementsCard from "@/components/StudentRequirementsCard";
 import RemindersBox from "@/components/RemindersBox";
 import MessagesBox from "@/components/MessagesBox";
 
@@ -95,6 +96,12 @@ export default async function DashboardPage() {
           <SectionHeader title="Mit teorihold" href="/kalender" />
           <StudentClassCard data={classes} />
         </section>
+        {data.requirements.length > 0 && (
+          <section className="mt-6">
+            <SectionHeader title="Krav uden for moduler" />
+            <StudentRequirementsCard requirements={data.requirements} />
+          </section>
+        )}
       </>
     );
   } else {

@@ -21,14 +21,24 @@ export default function StudentProgressList({
           s.lessonsTotal > 0
             ? Math.round((s.lessonsDone / s.lessonsTotal) * 100)
             : 0;
+        const paused = s.status === "paused";
         return (
           <li key={s.enrollmentId}>
             <Link
               href={`/elever/${s.enrollmentId}`}
-              className="block rounded-xl border border-neutral-200 bg-white p-3 transition hover:border-neutral-300 hover:bg-neutral-50"
+              className={`block rounded-xl border border-neutral-200 bg-white p-3 transition hover:border-neutral-300 hover:bg-neutral-50 ${
+                paused ? "opacity-60" : ""
+              }`}
             >
               <div className="flex items-baseline justify-between gap-2">
-                <span className="font-medium">{s.name}</span>
+                <span className="flex items-center gap-2 font-medium">
+                  {s.name}
+                  {paused && (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      På pause
+                    </span>
+                  )}
+                </span>
                 <span className="text-xs text-neutral-500">
                   {s.lessonsDone}/{s.lessonsTotal} lektioner
                 </span>

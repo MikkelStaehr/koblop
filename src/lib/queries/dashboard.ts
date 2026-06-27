@@ -5,6 +5,8 @@ import type {
   LessonStatus,
   ModuleStatus,
   PracticalVenue,
+  EnrollmentStatus,
+  RequirementType,
 } from "@/lib/database.types";
 
 export type EventTone = "blue" | "green" | "amber" | "slate";
@@ -74,6 +76,7 @@ export interface StudentRow {
   currentModuleOrder: number | null;
   lessonsDone: number;
   lessonsTotal: number;
+  status: EnrollmentStatus;
 }
 
 const DONE: LessonStatus[] = ["gennemfoert", "godkendt"];
@@ -188,9 +191,49 @@ export async function getMessages(): Promise<MessageItem[]> {
 interface RawEnrollment {
   id: string;
   started_at: string;
+  status: EnrollmentStatus;
   student: { id: string; full_name: string | null; email: string | null } | null;
   module_progress: { order_index: number; status: ModuleStatus; module: { title: string } | null }[];
   lesson_progress: { type: LessonType; status: LessonStatus }[];
+}
+
+const ROSTER_SELECT = `id, started_at, status,
+   student:profiles!student_id(id, full_name, email),
+   module_progress(order_index, status, module:modules!module_id(title)),
+   lesson_progress(type, status)`;
+
+function mapStudentRow(e: RawEnrollment): StudentRow {
+  const current = e.module_progress
+    .filter((m) => m.status === "i_gang")
+    .sort((a, b) => a.order_index - b.order_index)[0];
+  const done = e.lesson_progress.filter((l) => DONE.includes(l.status)).length;
+  return {
+    enrollmentId: e.id,
+    studentId: e.student?.id ?? "",
+    name: e.student?.full_name ?? "Ukendt elev",
+    email: e.student?.email ?? null,
+    startedAt: e.started_at,
+    currentModule: current?.module?.title ?? null,
+    currentModuleOrder: current?.order_index ?? null,
+    lessonsDone: done,
+    lessonsTotal: e.lesson_progress.length,
+    status: e.status,
+  };
+}
+
+// Elevliste til /elever — inkluderer pauserede så de kan findes/genaktiveres.
+// Aktive først, derefter pauserede; alfabetisk inden for hver gruppe.
+export async function getStudentRoster(): Promise<StudentRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("enrollments")
+    .select(ROSTER_SELECT)
+    .in("status", ["active", "paused"]);
+  const rows = (data ?? []) as unknown as RawEnrollment[];
+  return rows.map(mapStudentRow).sort((a, b) => {
+    if (a.status !== b.status) return a.status === "active" ? -1 : 1;
+    return a.name.localeCompare(b.name, "da");
+  });
 }
 
 interface RawBooking {
@@ -218,34 +261,13 @@ export async function getInstructorDashboard(
 
   const { data: enrollRaw } = await supabase
     .from("enrollments")
-    .select(
-      `id, started_at,
-       student:profiles!student_id(id, full_name, email),
-       module_progress(order_index, status, module:modules!module_id(title)),
-       lesson_progress(type, status)`,
-    )
+    .select(ROSTER_SELECT)
     .eq("status", "active");
 
   const enrollments = (enrollRaw ?? []) as unknown as RawEnrollment[];
 
   const students: StudentRow[] = enrollments
-    .map((e) => {
-      const current = e.module_progress
-        .filter((m) => m.status === "i_gang")
-        .sort((a, b) => a.order_index - b.order_index)[0];
-      const done = e.lesson_progress.filter((l) => DONE.includes(l.status)).length;
-      return {
-        enrollmentId: e.id,
-        studentId: e.student?.id ?? "",
-        name: e.student?.full_name ?? "Ukendt elev",
-        email: e.student?.email ?? null,
-        startedAt: e.started_at,
-        currentModule: current?.module?.title ?? null,
-        currentModuleOrder: current?.order_index ?? null,
-        lessonsDone: done,
-        lessonsTotal: e.lesson_progress.length,
-      };
-    })
+    .map(mapStudentRow)
     .sort((a, b) => a.name.localeCompare(b.name, "da"));
 
   const { data: bookingRaw } = await supabase
@@ -343,8 +365,15 @@ export interface StudentModuleRow {
   praksisTotal: number;
 }
 
+export interface StudentRequirement {
+  title: string;
+  type: RequirementType;
+  completed: boolean;
+}
+
 export interface StudentDashboard {
   modules: StudentModuleRow[];
+  requirements: StudentRequirement[];
   events: CalEvent[];
   availability: AvailabilityBand[];
   notices: Notice[];
@@ -360,6 +389,14 @@ interface RawStudentEnrollment {
     module: { title: string } | null;
   }[];
   lesson_progress: { module_id: string; type: LessonType; status: LessonStatus }[];
+  enrollment_requirements: {
+    completed: boolean;
+    requirement: {
+      title: string;
+      type: RequirementType;
+      order_index: number;
+    } | null;
+  }[];
 }
 
 export async function getStudentDashboard(
@@ -374,7 +411,8 @@ export async function getStudentDashboard(
     .select(
       `id, primary_instructor_id,
        module_progress(order_index, status, module:modules!module_id(title), module_id),
-       lesson_progress(module_id, type, status)`,
+       lesson_progress(module_id, type, status),
+       enrollment_requirements(completed, requirement:additional_requirements!requirement_id(title, type, order_index))`,
     )
     .eq("student_id", userId)
     .eq("status", "active")
@@ -399,6 +437,15 @@ export async function getStudentDashboard(
         praksisTotal: praksis.length,
       };
     });
+
+  const requirements: StudentRequirement[] = e.enrollment_requirements
+    .filter((r) => r.requirement)
+    .sort((a, b) => a.requirement!.order_index - b.requirement!.order_index)
+    .map((r) => ({
+      title: r.requirement!.title,
+      type: r.requirement!.type,
+      completed: r.completed,
+    }));
 
   const { data: bookingRaw } = await supabase
     .from("bookings")
@@ -476,5 +523,5 @@ export async function getStudentDashboard(
       body: `Teori ${current.theoryDone}/${current.theoryTotal} · Køretimer ${current.praksisDone}/${current.praksisTotal}`,
     });
   }
-  return { modules, events, availability, notices };
+  return { modules, requirements, events, availability, notices };
 }

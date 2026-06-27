@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/lib/auth";
-import { getInstructorDashboard } from "@/lib/queries/dashboard";
-import { startOfWeek } from "@/lib/dates";
+import { getStudentRoster } from "@/lib/queries/dashboard";
 import StudentProgressList from "@/components/StudentProgressList";
 import CreateStudentForm from "@/components/CreateStudentForm";
 
@@ -10,16 +9,16 @@ export default async function EleverPage() {
   if (!ctx) redirect("/login");
   if (ctx.profile?.role === "student") redirect("/");
 
-  const { students } = await getInstructorDashboard(
-    ctx.userId,
-    startOfWeek(new Date()),
-  );
+  const students = await getStudentRoster();
+  const activeCount = students.filter((s) => s.status === "active").length;
+  const pausedCount = students.length - activeCount;
 
   return (
     <div>
       <h1 className="mb-1 text-2xl font-semibold">Elever</h1>
       <p className="mb-5 text-sm text-neutral-500">
-        {students.length} aktive elever
+        {activeCount} aktive
+        {pausedCount > 0 ? ` · ${pausedCount} på pause` : ""}
       </p>
       <div className="mb-6">
         <CreateStudentForm />

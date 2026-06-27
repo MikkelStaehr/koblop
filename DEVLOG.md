@@ -5,6 +5,48 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-27 — Ekstrakrav uden for moduler (førstehjælp/prøver)
+
+Lukkede et funktionelt hul: de lovpligtige krav uden for moduler var seedet i
+`enrollment_requirements` men vistes ingen steder. En elev kunne gennemføre alle 5
+moduler og stadig mangle førstehjælp + prøver — usynligt i appen. (Bemærk: der er
+ingen `events`-tabel; den blev fjernet i 5-moduls-omskrivningen — "events" som
+manøvrebane/glatbane er nu moduler med venues, og teori er teorigange på hold.)
+
+De tre kat. B-krav: Færdselsrelateret førstehjælp (kursus), Teoriprøve, Praktisk
+prøve (prøver).
+
+- **Lærer:** "Krav uden for moduler"-sektion på `/elever/[id]` med afkrydsning
+  (`toggleRequirement` i `actions/progress.ts` → sætter `completed` + `completed_at`).
+- **Elev:** read-only "Krav uden for moduler"-kort på dashboardet (grønt flueben når
+  gennemført).
+- Queries: krav tilføjet til `getStudentProgress` (lærer) og `getStudentDashboard`
+  (elev). Ny `REQUIREMENT_TYPE_LABEL` i domain.
+
+**Verificeret mod live DB:** afkrydsning (completed→true→false), og elev kan læse
+sine egne 3 krav via RLS. Demo-data gendannet. Typecheck + lint grønne.
+
+---
+
+## 2026-06-27 — Slet/pausér elever
+
+Udvidede elevadministrationen på elev-detaljesiden (`/elever/[id]`):
+- **Pause/genaktivér** (`setEnrollmentStatus`): sætter `enrollments.status` til
+  `paused`/`active`. Pauserede kan ikke booke (getBookingOptions kræver allerede
+  `active`) og falder ud af aktive lister.
+- **Slet permanent** (`deleteStudent`): sletter auth-brugeren → kaskaderer profil,
+  forløb, bookinger, holdmedlemskab og fremmøde via FK `on delete cascade`. Bekræfter
+  samme skole før sletning (admin omgår RLS). To-trins bekræft i UI.
+- **/elever** bruger nu `getStudentRoster` (aktive + pauserede, aktive først) med en
+  "På pause"-badge, så pauserede kan findes og genaktiveres. Dashboard-sidekolonnen
+  forbliver kun-aktive. Delt `mapStudentRow`-helper.
+
+**Verificeret end-to-end mod live DB:** oprettede testelev (54 lektioner seedet) →
+pause → genaktivér → slet; bekræftede at profil, enrollment, lektioner og moduler
+alle blev fjernet (0 rækker). Typecheck + lint grønne.
+
+---
+
 ## 2026-06-26 — Onboarding: kørelæreren opretter elever
 
 Demo → reelt brugbart: kørelæreren kan nu selv oprette en elev fra `/elever`.

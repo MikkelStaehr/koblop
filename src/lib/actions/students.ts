@@ -110,3 +110,69 @@ export async function createStudent(input: {
   revalidatePath("/");
   return { ok: true, loginLink };
 }
+
+async function requireStaffSchool() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return { supabase, user: null as null, schoolId: null, error: "Du er ikke logget ind." };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, school_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!profile || (profile.role !== "instructor" && profile.role !== "admin"))
+    return { supabase, user: null as null, schoolId: null, error: "Kun kørelærere kan administrere elever." };
+  return { supabase, user, schoolId: profile.school_id, error: undefined };
+}
+
+// Sæt en elevs forløb på pause eller genaktivér. Pauserede kan ikke booke og
+// falder ud af aktive lister (RLS enrollment_write_staff håndhæver ejerskab).
+export async function setEnrollmentStatus(
+  enrollmentId: string,
+  status: "active" | "paused",
+): Promise<{ ok: boolean; error?: string }> {
+  const { supabase, user, error } = await requireStaffSchool();
+  if (error || !user) return { ok: false, error };
+
+  const { error: upErr } = await supabase
+    .from("enrollments")
+    .update({ status })
+    .eq("id", enrollmentId);
+  if (upErr) return { ok: false, error: upErr.message };
+
+  revalidatePath("/elever");
+  revalidatePath(`/elever/${enrollmentId}`);
+  revalidatePath("/");
+  return { ok: true };
+}
+
+// Slet en elev permanent. Sletter auth-brugeren → kaskaderer profil, forløb,
+// bookinger og holdmedlemskab via FK on delete cascade.
+export async function deleteStudent(
+  enrollmentId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const { user, schoolId, error } = await requireStaffSchool();
+  if (error || !user) return { ok: false, error };
+  if (!schoolId) return { ok: false, error: "Din profil mangler en skole." };
+
+  // Slå eleven op via forløbet og bekræft samme skole (admin omgår RLS).
+  const admin = createAdminClient();
+  const { data: enr } = await admin
+    .from("enrollments")
+    .select("student_id, school_id")
+    .eq("id", enrollmentId)
+    .maybeSingle();
+  if (!enr) return { ok: false, error: "Eleven blev ikke fundet." };
+  if (enr.school_id !== schoolId)
+    return { ok: false, error: "Eleven hører til en anden skole." };
+
+  const { error: delErr } = await admin.auth.admin.deleteUser(enr.student_id);
+  if (delErr) return { ok: false, error: delErr.message };
+
+  revalidatePath("/elever");
+  revalidatePath("/");
+  return { ok: true };
+}

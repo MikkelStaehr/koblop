@@ -47,6 +47,11 @@ export const LESSON_TYPE_LABEL: Record<LessonType, string> = {
   praksis: "Køretime",
 };
 
+export const REQUIREMENT_TYPE_LABEL: Record<RequirementType, string> = {
+  kursus: "Kursus",
+  proeve: "Prøve",
+};
+
 // Kun praksislektioner bookes 1-til-1 af eleven; teori er holdundervisning.
 export const STUDENT_BOOKABLE_TYPE: LessonType = "praksis";
 

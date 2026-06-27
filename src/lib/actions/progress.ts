@@ -82,6 +82,28 @@ export async function approveModule(
   return { ok: true };
 }
 
+// Afkryds et lovpligtigt krav uden for moduler (førstehjælp/prøver).
+export async function toggleRequirement(
+  requirementId: string,
+  completed: boolean,
+  enrollmentId: string,
+): Promise<Result> {
+  const { supabase, user, error } = await requireStaff();
+  if (error || !user) return { ok: false, error };
+
+  const { error: upErr } = await supabase
+    .from("enrollment_requirements")
+    .update({
+      completed,
+      completed_at: completed ? new Date().toISOString() : null,
+    })
+    .eq("id", requirementId);
+  if (upErr) return { ok: false, error: upErr.message };
+
+  revalidate(enrollmentId);
+  return { ok: true };
+}
+
 // Genåbn et godkendt modul (fortryd). Låser ikke næste modul igen.
 export async function reopenModule(
   moduleProgressId: string,
