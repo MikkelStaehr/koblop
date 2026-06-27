@@ -5,7 +5,20 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
-## 2026-06-27 — Resten af Indstillinger: skole, afbudsfrist, skolevogne
+## 2026-06-27 — Milepæl: funktionel base færdig → næste fase er UX/UI
+
+Den funktionelle kerne står nu komplet og verificeret mod live-DB:
+- Onboarding (opret/pausér/slet elever) · booking + afbud · tilgængelighed
+- Lærerens afkrydsning (lektioner + moduler) · teorihold (kohorte + teorigange +
+  fremmøde) · lovpligtige ekstrakrav · komplette indstillinger (skole/frist/vogne)
+
+Ingen placeholder-sider tilbage. Hele det lovpligtige forløb spores (5 moduler +
+54 lektioner + 3 ekstrakrav).
+
+**Næste fase: UX/UI-design.** Funktionerne virker, men designet er funktionelt-først.
+Kendt designgæld at tage fat på: kalender-grid'et (`WeekCalendar`) noteret "grimt"
+flere gange; generelt visuelt løft af flows. Ikke-design opfølgning: SMTP + ægte
+invitations-mails; bekræft at de oprindeligt lækkede nøgler er roteret.
 
 `/indstillinger` er nu komplet med tre sektioner: tilgængelighed (eksisterende),
 **skole & afbudsfrist** og **skolevogne**.
