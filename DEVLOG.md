@@ -5,6 +5,27 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-27 — Resten af Indstillinger: skole, afbudsfrist, skolevogne
+
+`/indstillinger` er nu komplet med tre sektioner: tilgængelighed (eksisterende),
+**skole & afbudsfrist** og **skolevogne**.
+
+- **Skole & afbudsfrist** (`updateSchool`): redigér skolenavn + `cancellation_window_hours`
+  (0–168t). Afbudsfristen styrer allerede `cancelBooking` (elever kan kun aflyse
+  online tidligere end fristen).
+- **Skolevogne** (`resources`): opret, deaktivér/aktivér og slet køretøjer.
+- Page henter availability + school + resources parallelt.
+
+**RLS-ændring (`20260627160000_school_update_staff.sql`):** `schools`-update var
+kun-admin, men demo-brugeren er instructor og der findes ingen admin. I små skoler
+er læreren også admin → udvidet til staff (admin+instructor), konsistent med
+ressourcer/tilgængelighed. **Skal køres** før skole/afbudsfrist kan gemmes.
+
+**Verificeret mod live DB med lærer-token:** ressource-oprettelse virker (staff-RLS);
+skole-update gav 0 rækker før migrationen (bekræfter behovet). Typecheck + lint grønne.
+
+---
+
 ## 2026-06-27 — Ekstrakrav uden for moduler (førstehjælp/prøver)
 
 Lukkede et funktionelt hul: de lovpligtige krav uden for moduler var seedet i
