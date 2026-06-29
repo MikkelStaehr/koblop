@@ -133,6 +133,8 @@ export async function deleteClass(classId: string): Promise<Result> {
   if (delErr) return { ok: false, error: delErr.message };
 
   revalidatePath("/hold");
+  revalidatePath("/kalender");
+  revalidatePath("/");
   return { ok: true };
 }
 

@@ -8,6 +8,7 @@ import {
 } from "@/lib/queries/classes";
 import ClassMembers from "@/components/ClassMembers";
 import CreateSessionForm from "@/components/CreateSessionForm";
+import DeleteClassButton from "@/components/DeleteClassButton";
 import { fmtTime } from "@/lib/dates";
 
 function fmtSessionDate(iso: string): string {
@@ -44,10 +45,17 @@ export default async function ClassDetailPage({
         >
           ← Hold
         </Link>
-        <h1 className="mb-1 mt-2 text-2xl font-semibold">{detail.name}</h1>
-        {detail.instructorName && (
-          <p className="text-sm text-neutral-500">{detail.instructorName}</p>
-        )}
+        <div className="mt-2 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="mb-1 text-2xl font-semibold">{detail.name}</h1>
+            {detail.instructorName && (
+              <p className="text-sm text-neutral-500">
+                {detail.instructorName}
+              </p>
+            )}
+          </div>
+          <DeleteClassButton classId={detail.id} className={detail.name} />
+        </div>
       </div>
 
       <section>
