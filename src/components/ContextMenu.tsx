@@ -24,15 +24,20 @@ export default function ContextMenu({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    window.addEventListener("click", close);
-    window.addEventListener("contextmenu", close);
+    // Udskyd luk-lytterne ét tick, så det højreklik der ÅBNEDE menuen ikke
+    // selv lukker den igen med det samme.
+    const t = setTimeout(() => {
+      window.addEventListener("click", close);
+      window.addEventListener("contextmenu", close);
+      window.addEventListener("scroll", close, true);
+    }, 0);
     window.addEventListener("keydown", onKey);
-    window.addEventListener("scroll", close, true);
     return () => {
+      clearTimeout(t);
       window.removeEventListener("click", close);
       window.removeEventListener("contextmenu", close);
-      window.removeEventListener("keydown", onKey);
       window.removeEventListener("scroll", close, true);
+      window.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
 

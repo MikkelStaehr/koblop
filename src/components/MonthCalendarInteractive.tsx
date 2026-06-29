@@ -35,6 +35,7 @@ export default function MonthCalendarInteractive({
 
   function onContextDay(dateISO: string, e: React.MouseEvent) {
     e.preventDefault();
+    e.stopPropagation();
     setMenu({
       x: clamp(e.clientX),
       y: e.clientY,
