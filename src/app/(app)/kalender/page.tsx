@@ -22,7 +22,10 @@ import MonthCalendarInteractive from "@/components/MonthCalendarInteractive";
 import MonthStrip from "@/components/MonthStrip";
 import MonthBookings from "@/components/MonthBookings";
 import WeekCalendar from "@/components/WeekCalendar";
-import { getSchedulableStudents } from "@/lib/queries/schedule";
+import {
+  getSchedulableStudents,
+  getActiveEnrollments,
+} from "@/lib/queries/schedule";
 
 type Role = "student" | "instructor" | "admin";
 
@@ -112,7 +115,7 @@ export default async function KalenderPage({
   const now = new Date();
   const year = monthStart.getFullYear();
   const isStaff = role !== "student";
-  const [events, summary, schedulable] = await Promise.all([
+  const [events, summary, schedulable, activeEnrollments] = await Promise.all([
     getRangeEvents(
       ctx.userId,
       role,
@@ -121,6 +124,7 @@ export default async function KalenderPage({
     ),
     getYearSummary(ctx.userId, role, year),
     isStaff ? getSchedulableStudents() : Promise.resolve([]),
+    isStaff ? getActiveEnrollments() : Promise.resolve([]),
   ]);
 
   const monthEvents = events.filter((e) => {
@@ -166,6 +170,7 @@ export default async function KalenderPage({
               events={events}
               header={calHeader}
               students={schedulable}
+              attendees={activeEnrollments}
             />
           ) : (
             <MonthCalendar

@@ -19,6 +19,7 @@ export interface CalEvent {
   subtitle?: string;
   tone: EventTone;
   bookingId?: string; // sat for rigtige (aktive) bookinger → kan aflyses
+  eventId?: string; // sat for gruppe-events (manøvrebane/glatbane/førstehjælp)
 }
 
 export interface AvailabilityBand {
@@ -210,7 +211,7 @@ export async function getRangeEvents(
 
   const { data } = await q;
   const bookings = (data ?? []) as unknown as RawBooking[];
-  return bookings.map((b) => ({
+  const bookingEvents: CalEvent[] = bookings.map((b) => ({
     id: b.id,
     start: b.start_at,
     end: b.end_at,
@@ -222,6 +223,37 @@ export async function getRangeEvents(
     tone: b.status === "completed" ? "green" : "blue",
     bookingId: b.status === "booked" ? b.id : undefined,
   }));
+
+  // Gruppe-events (manøvrebane/glatbane/førstehjælp) i samme interval.
+  // RLS: staff ser skolens events; elever ser dem de er tilmeldt.
+  const { data: evRaw } = await supabase
+    .from("school_events")
+    .select("id, type, title, location, starts_at, ends_at")
+    .gte("starts_at", fromISO)
+    .lt("starts_at", toISO);
+  const EVENT_TONE: Record<string, EventTone> = {
+    manoevrebane: "amber",
+    glatbane: "slate",
+    foerstehjaelp: "green",
+  };
+  const EVENT_LABEL: Record<string, string> = {
+    manoevrebane: "Manøvrebane",
+    glatbane: "Glatbane",
+    foerstehjaelp: "Førstehjælp",
+  };
+  const events: CalEvent[] = (evRaw ?? []).map((e) => ({
+    id: `evt-${e.id}`,
+    start: e.starts_at as string,
+    end: e.ends_at as string,
+    title: e.title || EVENT_LABEL[e.type as string] || "Event",
+    subtitle: (e.location as string) || EVENT_LABEL[e.type as string],
+    tone: EVENT_TONE[e.type as string] ?? "slate",
+    eventId: e.id as string,
+  }));
+
+  return [...bookingEvents, ...events].sort((a, b) =>
+    a.start.localeCompare(b.start),
+  );
 }
 
 // Antal bookinger pr. måned pr. lokation/type for et helt år (måneds-stribe).

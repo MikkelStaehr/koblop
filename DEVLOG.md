@@ -5,6 +5,30 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — Gruppe-events (manøvrebane/glatbane/førstehjælp) — del 1
+
+Kunden valgte "gruppe-events": én session m. tid+sted hvor flere elever tilmeldes.
+Del 1 = struktur + oprettelse + visning (fremmøde-afkrydsning følger i del 2).
+
+- **Migration** (`20260629170000_events.sql`): `event_type`-enum + `school_events`
+  + `event_attendees` (+ RLS som teorihold; `event_school_id`-helper mod
+  policy-rekursion). Pushet til live-DB.
+- **Højreklik på en dag** giver nu: Planlæg køretime · Manøvrebane · Glatbane ·
+  Førstehjælpskursus. De tre sidste åbner `EventModal` (dato/tid/varighed/sted +
+  multi-tilmeld elever) → `createEvent`.
+- **Events vises på kalenderen** (merget ind i `getRangeEvents` med egen farve pr.
+  type). Højreklik på et event → "Slet event".
+- Nye dele: `actions/events.ts` (createEvent/deleteEvent), `getActiveEnrollments`,
+  `EventModal`, `EVENT_TYPE_LABEL`/`EVENT_DEFAULT_MIN`, `CalEvent.eventId`.
+
+**Verificeret mod live DB som lærer:** opret glatbane-event (RLS) + tilmeld 2
+elever + læs tilbage. Build + typecheck grønne.
+
+**Del 2 (næste):** event-detalje + fremmøde-afkrydsning → markér elevens
+manøvrebane/glatbane-lektion eller førstehjælps-krav som gennemført.
+
+---
+
 ## 2026-06-29 — Højreklik i kalenderen: planlæg / aflys / ombook
 
 Kontekstmenu på måneds-kalenderen (kørelærer):

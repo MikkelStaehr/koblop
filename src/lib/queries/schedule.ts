@@ -11,6 +11,30 @@ export interface Schedulable {
 
 const DONE: LessonStatus[] = ["gennemfoert", "godkendt"];
 
+// Alle aktive elever (til at tilmelde et gruppe-event).
+export interface ActiveEnrollment {
+  enrollmentId: string;
+  name: string;
+}
+
+export async function getActiveEnrollments(): Promise<ActiveEnrollment[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("enrollments")
+    .select(`id, student:profiles!student_id(full_name)`)
+    .eq("status", "active");
+  const rows = (data ?? []) as unknown as {
+    id: string;
+    student: { full_name: string | null } | null;
+  }[];
+  return rows
+    .map((r) => ({
+      enrollmentId: r.id,
+      name: r.student?.full_name ?? "Elev",
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "da"));
+}
+
 interface RawEnr {
   id: string;
   student: { full_name: string | null } | null;

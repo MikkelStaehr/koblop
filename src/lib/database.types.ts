@@ -32,6 +32,7 @@ export type EnrollmentStatus = "active" | "completed" | "paused";
 export type BookingStatus = "booked" | "completed" | "cancelled";
 export type ExceptionType = "block" | "extra";
 export type RequirementType = "kursus" | "proeve";
+export type EventType = "manoevrebane" | "glatbane" | "foerstehjaelp";
 
 export type Database = {
   public: {
@@ -448,6 +449,54 @@ export type Database = {
         >;
         Relationships: [];
       };
+      school_events: {
+        Row: {
+          id: string;
+          school_id: string;
+          instructor_id: string | null;
+          type: EventType;
+          title: string | null;
+          location: string | null;
+          starts_at: string;
+          ends_at: string;
+          capacity: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          school_id: string;
+          instructor_id?: string | null;
+          type: EventType;
+          title?: string | null;
+          location?: string | null;
+          starts_at: string;
+          ends_at: string;
+          capacity?: number | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["school_events"]["Insert"]>;
+        Relationships: [];
+      };
+      event_attendees: {
+        Row: {
+          id: string;
+          event_id: string;
+          enrollment_id: string;
+          attended: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          enrollment_id: string;
+          attended?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<
+          Database["public"]["Tables"]["event_attendees"]["Insert"]
+        >;
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: {
@@ -463,8 +512,13 @@ export type Database = {
         Args: { p_instructor: string; p_from: string; p_to: string };
         Returns: { start_at: string; end_at: string }[];
       };
+      event_school_id: {
+        Args: { p_event: string };
+        Returns: string;
+      };
     };
     Enums: {
+      event_type: EventType;
       user_role: UserRole;
       lesson_type: LessonType;
       practical_venue: PracticalVenue;

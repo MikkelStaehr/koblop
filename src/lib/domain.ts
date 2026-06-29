@@ -66,3 +66,19 @@ export const KATEGORI_B_RULES = {
 
 // Varighed (minutter) for en praksislektion ved booking.
 export const PRAKSIS_DURATION_MIN = 45;
+
+// Gruppe-events (manøvrebane/glatbane/førstehjælp).
+export type EventTypeKey = "manoevrebane" | "glatbane" | "foerstehjaelp";
+
+export const EVENT_TYPE_LABEL: Record<EventTypeKey, string> = {
+  manoevrebane: "Manøvrebane",
+  glatbane: "Glatbane",
+  foerstehjaelp: "Førstehjælpskursus",
+};
+
+// Standard-varighed (minutter) pr. event-type — kan ændres i modalen.
+export const EVENT_DEFAULT_MIN: Record<EventTypeKey, number> = {
+  manoevrebane: 240,
+  glatbane: 240,
+  foerstehjaelp: 480,
+};
