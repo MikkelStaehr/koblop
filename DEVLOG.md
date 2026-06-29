@@ -5,6 +5,23 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — Teorihold: fast ugentlig rytme → auto-genererede teorigange
+
+Når et hold oprettes kan man nu vælge en fast ugentlig teori-rytme (ugedag, tid,
+varighed, startdato). `createClass` genererer så **30 teorigange** automatisk —
+én pr. teorilektion i kat. B-rækkefølge, ugentligt fra første valgte ugedag efter
+startdatoen.
+
+- `CreateClassForm`: felter for ugedag/tid/varighed/start (kan slås fra).
+- **Teorigange vises nu på `/kalender`** — `getRangeEvents` henter også
+  `class_sessions` (ny **violet** tone). Tidligere kun på elevens dashboard.
+- Højreklik på en teorigang i kalenderen → "Gå til holdet".
+
+**Verificeret mod live DB som lærer:** opret hold + 30 ugentlige teorigange (RLS),
+spænder ~½ år; læsbare. Build + typecheck grønne.
+
+---
+
 ## 2026-06-29 — Gruppe-events (manøvrebane/glatbane/førstehjælp) — del 1
 
 Kunden valgte "gruppe-events": én session m. tid+sted hvor flere elever tilmeldes.

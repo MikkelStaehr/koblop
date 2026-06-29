@@ -105,6 +105,12 @@ export default function MonthCalendarInteractive({
           else alert(r.error ?? "Kunne ikke slette.");
         },
       });
+    } else if (ev.sessionId && ev.classId) {
+      const cid = ev.classId;
+      items.push({
+        label: "Gå til holdet",
+        onClick: () => router.push(`/hold/${cid}`),
+      });
     } else {
       items.push({
         label: "Planlæg køretime…",

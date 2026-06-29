@@ -24,9 +24,17 @@ async function requireStaff() {
 }
 
 // ── Hold ────────────────────────────────────────────────────────────────
+export interface TheorySchedule {
+  weekday: number; // DB: 0 = søndag
+  time: string; // "HH:MM"
+  durationMin: number;
+  startDate: string; // "YYYY-MM-DD"
+}
+
 export async function createClass(
   name: string,
   instructorId: string | null,
+  schedule?: TheorySchedule,
 ): Promise<{ ok: boolean; error?: string; id?: string }> {
   const { supabase, user, schoolId, error } = await requireStaff();
   if (error || !user) return { ok: false, error };
@@ -44,9 +52,54 @@ export async function createClass(
     .select("id")
     .single();
   if (insErr) return { ok: false, error: insErr.message };
+  const classId = data.id;
+
+  // Auto-generér teorigange: én pr. teorilektion, ugentligt fra startdato.
+  if (schedule) {
+    const { data: cat } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("code", "B")
+      .maybeSingle();
+    const { data: mods } = await supabase
+      .from("modules")
+      .select("id, order_index, min_theory_lessons")
+      .eq("category_id", cat?.id ?? "")
+      .order("order_index");
+
+    const lessons: { module_id: string; lesson_no: number }[] = [];
+    for (const m of mods ?? [])
+      for (let n = 1; n <= (m.min_theory_lessons ?? 0); n++)
+        lessons.push({ module_id: m.id, lesson_no: n });
+
+    const base = new Date(`${schedule.startDate}T00:00:00`);
+    const [h, mm] = schedule.time.split(":").map(Number);
+    if (!Number.isNaN(base.getTime()) && lessons.length > 0) {
+      const add = (schedule.weekday - base.getDay() + 7) % 7;
+      const first = new Date(base);
+      first.setDate(first.getDate() + add);
+      const rows = lessons.map((l, i) => {
+        const d = new Date(first);
+        d.setDate(d.getDate() + i * 7);
+        d.setHours(h, mm, 0, 0);
+        const end = new Date(d.getTime() + schedule.durationMin * 60000);
+        return {
+          class_id: classId,
+          module_id: l.module_id,
+          lesson_no: l.lesson_no,
+          starts_at: d.toISOString(),
+          ends_at: end.toISOString(),
+          topic: null,
+        };
+      });
+      const { error: sErr } = await supabase.from("class_sessions").insert(rows);
+      if (sErr) return { ok: false, error: sErr.message, id: classId };
+    }
+  }
 
   revalidatePath("/hold");
-  return { ok: true, id: data.id };
+  revalidatePath("/kalender");
+  return { ok: true, id: classId };
 }
 
 export async function renameClass(

@@ -23,6 +23,7 @@ const TONE: Record<EventTone, string> = {
   green: "bg-emerald-50 text-emerald-900 border-l-emerald-500",
   amber: "bg-amber-50 text-amber-900 border-l-amber-500",
   slate: "bg-slate-50 text-slate-800 border-l-slate-400",
+  violet: "bg-violet-50 text-violet-900 border-l-violet-500",
 };
 
 const ROW_H = 56; // px pr. time

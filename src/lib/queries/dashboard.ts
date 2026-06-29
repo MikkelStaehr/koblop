@@ -9,7 +9,7 @@ import type {
   RequirementType,
 } from "@/lib/database.types";
 
-export type EventTone = "blue" | "green" | "amber" | "slate";
+export type EventTone = "blue" | "green" | "amber" | "slate" | "violet";
 
 export interface CalEvent {
   id: string;
@@ -20,6 +20,8 @@ export interface CalEvent {
   tone: EventTone;
   bookingId?: string; // sat for rigtige (aktive) bookinger → kan aflyses
   eventId?: string; // sat for gruppe-events (manøvrebane/glatbane/førstehjælp)
+  sessionId?: string; // sat for teorigange (class_sessions)
+  classId?: string; // holdet en teorigang hører til
 }
 
 export interface AvailabilityBand {
@@ -251,7 +253,35 @@ export async function getRangeEvents(
     eventId: e.id as string,
   }));
 
-  return [...bookingEvents, ...events].sort((a, b) =>
+  // Teorigange (class_sessions). RLS: staff ser skolens; elev ser egne holds.
+  const { data: sessRaw } = await supabase
+    .from("class_sessions")
+    .select(
+      `id, lesson_no, starts_at, ends_at, topic, class:classes!class_id(id, name)`,
+    )
+    .gte("starts_at", fromISO)
+    .lt("starts_at", toISO);
+  const sessions: CalEvent[] = (
+    (sessRaw ?? []) as unknown as {
+      id: string;
+      lesson_no: number;
+      starts_at: string;
+      ends_at: string;
+      topic: string | null;
+      class: { id: string; name: string } | null;
+    }[]
+  ).map((s) => ({
+    id: `sess-${s.id}`,
+    start: s.starts_at,
+    end: s.ends_at,
+    title: s.class?.name ?? "Teorihold",
+    subtitle: s.topic || `Teori ${s.lesson_no}`,
+    tone: "violet",
+    sessionId: s.id,
+    classId: s.class?.id,
+  }));
+
+  return [...bookingEvents, ...events, ...sessions].sort((a, b) =>
     a.start.localeCompare(b.start),
   );
 }

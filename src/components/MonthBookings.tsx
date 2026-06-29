@@ -6,6 +6,7 @@ const DOT: Record<string, string> = {
   green: "bg-emerald-500",
   amber: "bg-amber-500",
   slate: "bg-slate-400",
+  violet: "bg-violet-500",
 };
 
 const LABEL_PILL: Record<string, string> = {

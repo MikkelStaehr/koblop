@@ -9,6 +9,7 @@ const CHIP: Record<EventTone, string> = {
   green: "bg-emerald-100 text-emerald-800",
   amber: "bg-amber-100 text-amber-800",
   slate: "bg-slate-100 text-slate-700",
+  violet: "bg-violet-100 text-violet-800",
 };
 
 export default function MonthCalendar({
