@@ -5,6 +5,16 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — Fuld bredde + månedens bookinger ved siden af
+
+- AppShell-indhold bruger nu **fuld browserbredde** (fjernet `max-w-7xl`-cap),
+  fortsat mobile-first med padding.
+- `/kalender` (måned) er nu to-kolonne på desktop: kalender + stribe til venstre,
+  **"Månedens bookinger"-sidepanel** (`MonthBookings`) til højre — dato, tid,
+  navn, lokation. Stakker under kalenderen på mobil.
+
+---
+
 ## 2026-06-29 — Måneds-stribe under kalenderen
 
 Vandret stribe under måneds-kalenderen (`MonthStrip`): årets 12 måneder som

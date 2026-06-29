@@ -19,6 +19,7 @@ import {
 } from "@/lib/dates";
 import MonthCalendar from "@/components/MonthCalendar";
 import MonthStrip from "@/components/MonthStrip";
+import MonthBookings from "@/components/MonthBookings";
 import WeekCalendar from "@/components/WeekCalendar";
 
 type Role = "student" | "instructor" | "admin";
@@ -118,6 +119,11 @@ export default async function KalenderPage({
     getYearSummary(ctx.userId, role, year),
   ]);
 
+  const monthEvents = events.filter((e) => {
+    const d = new Date(e.start);
+    return d.getMonth() === monthStart.getMonth() && d.getFullYear() === year;
+  });
+
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
@@ -126,27 +132,39 @@ export default async function KalenderPage({
         </h1>
         <ViewToggle view="maaned" />
       </div>
-      <MonthCalendar monthStartISO={monthStart.toISOString()} events={events} />
-      <MonthStrip
-        year={year}
-        summary={summary}
-        activeMonth={monthStart.getMonth()}
-        nowYear={now.getFullYear()}
-        nowMonth={now.getMonth()}
-      />
-      <nav className="mt-4 flex items-center justify-center gap-3 text-sm">
-        <Link href={`/kalender?view=maaned&m=${offset - 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
-          ← Forrige måned
-        </Link>
-        {offset !== 0 && (
-          <Link href="/kalender?view=maaned&m=0" className="text-blue-600 underline">
-            I dag
-          </Link>
-        )}
-        <Link href={`/kalender?view=maaned&m=${offset + 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
-          Næste måned →
-        </Link>
-      </nav>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0">
+          <MonthCalendar
+            monthStartISO={monthStart.toISOString()}
+            events={events}
+          />
+          <MonthStrip
+            year={year}
+            summary={summary}
+            activeMonth={monthStart.getMonth()}
+            nowYear={now.getFullYear()}
+            nowMonth={now.getMonth()}
+          />
+          <nav className="mt-4 flex items-center justify-center gap-3 text-sm">
+            <Link href={`/kalender?view=maaned&m=${offset - 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
+              ← Forrige måned
+            </Link>
+            {offset !== 0 && (
+              <Link href="/kalender?view=maaned&m=0" className="text-blue-600 underline">
+                I dag
+              </Link>
+            )}
+            <Link href={`/kalender?view=maaned&m=${offset + 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
+              Næste måned →
+            </Link>
+          </nav>
+        </div>
+
+        <aside>
+          <MonthBookings events={monthEvents} />
+        </aside>
+      </div>
     </div>
   );
 }
