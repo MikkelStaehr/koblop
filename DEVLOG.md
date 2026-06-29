@@ -5,6 +5,23 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — Kalender: måneds-visning (planlægning) vs 7-dages (overblik)
+
+Klargjorde rollerne efter kundefeedback ("du blandede tingene sammen"):
+- **`/kalender` viser nu en hel måned** (`MonthCalendar`) som standard — det er
+  planlægningsværktøjet. 6-ugers grid, dato-pille (i dag fyldt), events som
+  små farvechips pr. dag (+N flere ved mange). Uge-grid'et (`WeekCalendar`)
+  bevaret som **Måned/Uge-toggle**.
+- **Dashboardet forbliver 7-dages overblik** (agenda-listen) — uændret.
+- Ny `getRangeEvents(userId, role, from, to)` henter bookinger for et vilkårligt
+  interval (måneds-grid'et). Uge-toggle bruger fortsat dashboard-queryen for at
+  få tilgængeligheds-bånd med.
+
+**Næste (bevidst adskilt):** højreklik-kontekstmenu på begge kalendre →
+planlæg / aflys / ombook. Egen funktion; kræver bl.a. lærer-initieret booking.
+
+---
+
 ## 2026-06-29 — UX-fase start: kalender-redesign
 
 To DB-bogføringsfixes + start på UX-fasen.

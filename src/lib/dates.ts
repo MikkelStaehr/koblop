@@ -46,6 +46,23 @@ export function fmtDayMonth(d: Date): string {
   return d.toLocaleDateString("da-DK", { day: "numeric", month: "short" });
 }
 
+export function fmtMonthYear(d: Date): string {
+  return d.toLocaleDateString("da-DK", { month: "long", year: "numeric" });
+}
+
+export function startOfMonth(d: Date): Date {
+  const x = new Date(d);
+  x.setDate(1);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+export function addMonths(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setMonth(x.getMonth() + n);
+  return x;
+}
+
 // Andel (0..1) af kalenderdøgnet en tid ligger på — til vertikal placering.
 export function dayFraction(d: Date): number {
   const mins = d.getHours() * 60 + d.getMinutes();

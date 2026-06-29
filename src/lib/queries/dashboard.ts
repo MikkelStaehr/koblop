@@ -186,6 +186,42 @@ export async function getMessages(): Promise<MessageItem[]> {
   }));
 }
 
+// Bookinger i et vilkårligt interval (til måneds-/uge-kalenderen).
+export async function getRangeEvents(
+  userId: string,
+  role: "student" | "instructor" | "admin",
+  fromISO: string,
+  toISO: string,
+): Promise<CalEvent[]> {
+  const supabase = await createClient();
+  let q = supabase
+    .from("bookings")
+    .select(
+      `id, start_at, end_at, status,
+       enrollment:enrollments!enrollment_id(student:profiles!student_id(full_name)),
+       lesson:lesson_progress!lesson_id(type, venue, module:modules!module_id(title))`,
+    )
+    .neq("status", "cancelled")
+    .gte("start_at", fromISO)
+    .lt("start_at", toISO)
+    .order("start_at", { ascending: true });
+  if (role !== "student") q = q.eq("instructor_id", userId);
+
+  const { data } = await q;
+  const bookings = (data ?? []) as unknown as RawBooking[];
+  return bookings.map((b) => ({
+    id: b.id,
+    start: b.start_at,
+    end: b.end_at,
+    title:
+      role === "student"
+        ? (b.lesson?.module?.title ?? "Køretime")
+        : (b.enrollment?.student?.full_name ?? "Elev"),
+    subtitle: b.lesson ? venueShort(b.lesson.venue) : undefined,
+    tone: b.status === "completed" ? "green" : "blue",
+  }));
+}
+
 // ── Kørelærerens dashboard ────────────────────────────────────────────────
 
 interface RawEnrollment {

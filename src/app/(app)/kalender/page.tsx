@@ -2,91 +2,135 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAuthContext } from "@/lib/auth";
 import {
+  getRangeEvents,
   getInstructorDashboard,
   getStudentDashboard,
   type CalEvent,
   type AvailabilityBand,
 } from "@/lib/queries/dashboard";
-import { getStudentClasses } from "@/lib/queries/classes";
-import { startOfWeek, addDays, fmtDayMonth } from "@/lib/dates";
+import {
+  startOfMonth,
+  addMonths,
+  startOfWeek,
+  addDays,
+  fmtMonthYear,
+  fmtDayMonth,
+} from "@/lib/dates";
+import MonthCalendar from "@/components/MonthCalendar";
 import WeekCalendar from "@/components/WeekCalendar";
+
+type Role = "student" | "instructor" | "admin";
+
+function ViewToggle({ view }: { view: "maaned" | "uge" }) {
+  const base = "px-3 py-1.5 text-sm rounded-lg border";
+  const on = "bg-neutral-900 text-white border-neutral-900";
+  const off = "border-neutral-300 text-neutral-600";
+  return (
+    <div className="flex gap-2">
+      <Link href="/kalender?view=maaned" className={`${base} ${view === "maaned" ? on : off}`}>
+        Måned
+      </Link>
+      <Link href="/kalender?view=uge" className={`${base} ${view === "uge" ? on : off}`}>
+        Uge
+      </Link>
+    </div>
+  );
+}
 
 export default async function KalenderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ w?: string }>;
+  searchParams: Promise<{ view?: string; m?: string; w?: string }>;
 }) {
   const ctx = await getAuthContext();
   if (!ctx) redirect("/login");
 
   const sp = await searchParams;
-  const offset = Number.parseInt(sp.w ?? "0", 10) || 0;
-  const weekStart = startOfWeek(addDays(new Date(), offset * 7));
-  const weekEnd = addDays(weekStart, 6);
-  const weekStartISO = weekStart.toISOString();
+  const view = sp.view === "uge" ? "uge" : "maaned";
+  const role = (ctx.profile?.role ?? "instructor") as Role;
 
-  let events: CalEvent[] = [];
-  let availability: AvailabilityBand[] = [];
-  if (ctx.profile?.role === "student") {
-    const [d, classes] = await Promise.all([
-      getStudentDashboard(ctx.userId, weekStart),
-      getStudentClasses(ctx.userId),
-    ]);
-    if (d) {
+  if (view === "uge") {
+    const offset = Number.parseInt(sp.w ?? "0", 10) || 0;
+    const weekStart = startOfWeek(addDays(new Date(), offset * 7));
+    const weekEnd = addDays(weekStart, 6);
+
+    let events: CalEvent[] = [];
+    let availability: AvailabilityBand[] = [];
+    if (role === "student") {
+      const d = await getStudentDashboard(ctx.userId, weekStart);
+      if (d) {
+        events = d.events;
+        availability = d.availability;
+      }
+    } else {
+      const d = await getInstructorDashboard(ctx.userId, weekStart);
       events = d.events;
       availability = d.availability;
     }
-    // Flet teorigange i den viste uge ind som events.
-    const weekStartMs = weekStart.getTime();
-    const weekEndMs = addDays(weekStart, 7).getTime();
-    const theoryEvents: CalEvent[] = classes.sessions
-      .filter((s) => {
-        const t = new Date(s.startsAt).getTime();
-        return t >= weekStartMs && t < weekEndMs;
-      })
-      .map((s) => ({
-        id: `sess-${s.id}`,
-        start: s.startsAt,
-        end: s.endsAt,
-        title: "Teori",
-        subtitle: s.topic ?? `${s.moduleTitle} · Teori ${s.lessonNo}`,
-        tone: "amber",
-      }));
-    events = [...events, ...theoryEvents];
-  } else {
-    const d = await getInstructorDashboard(ctx.userId, weekStart);
-    events = d.events;
-    availability = d.availability;
+
+    return (
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Kalender</h1>
+          <ViewToggle view="uge" />
+        </div>
+        <WeekCalendar
+          weekStartISO={weekStart.toISOString()}
+          events={events}
+          availability={availability}
+        />
+        <nav className="mt-4 flex items-center justify-center gap-3 text-sm">
+          <Link href={`/kalender?view=uge&w=${offset - 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
+            ← Forrige
+          </Link>
+          <span className="text-neutral-500">
+            {fmtDayMonth(weekStart)} – {fmtDayMonth(weekEnd)}
+            {offset !== 0 && (
+              <Link href="/kalender?view=uge&w=0" className="ml-2 text-blue-600 underline">
+                I dag
+              </Link>
+            )}
+          </span>
+          <Link href={`/kalender?view=uge&w=${offset + 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
+            Næste →
+          </Link>
+        </nav>
+      </div>
+    );
   }
+
+  // ── Måneds-visning (standard) ──────────────────────────────────────────
+  const offset = Number.parseInt(sp.m ?? "0", 10) || 0;
+  const monthStart = startOfMonth(addMonths(new Date(), offset));
+  const gridStart = startOfWeek(monthStart);
+  const gridEnd = addDays(gridStart, 42);
+  const events = await getRangeEvents(
+    ctx.userId,
+    role,
+    gridStart.toISOString(),
+    gridEnd.toISOString(),
+  );
 
   return (
     <div>
-      <h1 className="mb-3 text-2xl font-semibold">Kalender</h1>
-      <WeekCalendar
-        weekStartISO={weekStartISO}
-        events={events}
-        availability={availability}
-      />
+      <div className="mb-3 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold capitalize">
+          {fmtMonthYear(monthStart)}
+        </h1>
+        <ViewToggle view="maaned" />
+      </div>
+      <MonthCalendar monthStartISO={monthStart.toISOString()} events={events} />
       <nav className="mt-4 flex items-center justify-center gap-3 text-sm">
-        <Link
-          href={`/kalender?w=${offset - 1}`}
-          className="rounded-lg border border-neutral-300 px-3 py-1.5"
-        >
-          ← Forrige
+        <Link href={`/kalender?view=maaned&m=${offset - 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
+          ← Forrige måned
         </Link>
-        <span className="text-neutral-500">
-          {fmtDayMonth(weekStart)} – {fmtDayMonth(weekEnd)}
-          {offset !== 0 && (
-            <Link href="/kalender?w=0" className="ml-2 text-blue-600 underline">
-              I dag
-            </Link>
-          )}
-        </span>
-        <Link
-          href={`/kalender?w=${offset + 1}`}
-          className="rounded-lg border border-neutral-300 px-3 py-1.5"
-        >
-          Næste →
+        {offset !== 0 && (
+          <Link href="/kalender?view=maaned&m=0" className="text-blue-600 underline">
+            I dag
+          </Link>
+        )}
+        <Link href={`/kalender?view=maaned&m=${offset + 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
+          Næste måned →
         </Link>
       </nav>
     </div>
