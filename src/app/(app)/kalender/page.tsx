@@ -72,7 +72,7 @@ export default async function KalenderPage({
     }
 
     return (
-      <div>
+      <div className="mx-auto max-w-[1600px]">
         <div className="mb-3 flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Kalender</h1>
           <ViewToggle view="uge" />
@@ -125,7 +125,7 @@ export default async function KalenderPage({
   });
 
   return (
-    <div>
+    <div className="mx-auto max-w-[1600px]">
       <div className="mb-3 flex items-center justify-between">
         <h1 className="text-2xl font-semibold capitalize">
           {fmtMonthYear(monthStart)}
@@ -133,7 +133,7 @@ export default async function KalenderPage({
         <ViewToggle view="maaned" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
           <MonthCalendar
             monthStartISO={monthStart.toISOString()}
@@ -161,7 +161,7 @@ export default async function KalenderPage({
           </nav>
         </div>
 
-        <aside>
+        <aside className="lg:sticky lg:top-6 lg:self-start">
           <MonthBookings events={monthEvents} />
         </aside>
       </div>
