@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { startOfWeek, addDays, DAY_LABELS, fmtTime } from "@/lib/dates";
 import type { CalEvent, EventTone } from "@/lib/queries/dashboard";
 
@@ -14,9 +14,11 @@ const CHIP: Record<EventTone, string> = {
 export default function MonthCalendar({
   monthStartISO,
   events,
+  header,
 }: {
   monthStartISO: string;
   events: CalEvent[];
+  header?: ReactNode;
 }) {
   const monthStart = useMemo(() => new Date(monthStartISO), [monthStartISO]);
   const gridStart = useMemo(() => startOfWeek(monthStart), [monthStart]);
@@ -37,11 +39,16 @@ export default function MonthCalendar({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      {header && (
+        <div className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3">
+          {header}
+        </div>
+      )}
       <div className="grid grid-cols-7 border-b border-neutral-200 bg-neutral-50">
         {DAY_LABELS.map((l) => (
           <div
             key={l}
-            className="px-2 py-2 text-center text-[11px] font-medium uppercase tracking-wide text-neutral-400"
+            className="px-2 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-neutral-500"
           >
             {l}
           </div>
@@ -51,14 +58,19 @@ export default function MonthCalendar({
         {cells.map((d, i) => {
           const inMonth = d.getMonth() === month;
           const isToday = d.getTime() === today.getTime();
+          const weekend = i % 7 >= 5;
           const dayEvents = eventsByDay[d.toDateString()] ?? [];
           const shown = dayEvents.slice(0, 3);
           const extra = dayEvents.length - shown.length;
           return (
             <div
               key={i}
-              className={`min-h-[104px] border-b border-r border-neutral-100 p-1.5 ${
-                inMonth ? "" : "bg-neutral-50/60"
+              className={`min-h-[116px] border-b border-r border-neutral-100 p-1.5 ${
+                !inMonth
+                  ? "bg-neutral-50/60"
+                  : weekend
+                    ? "bg-neutral-50/40"
+                    : ""
               }`}
             >
               <div

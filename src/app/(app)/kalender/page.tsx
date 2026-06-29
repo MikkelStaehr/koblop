@@ -124,20 +124,40 @@ export default async function KalenderPage({
     return d.getMonth() === monthStart.getMonth() && d.getFullYear() === year;
   });
 
+  const arrow =
+    "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-300 text-neutral-600 hover:bg-neutral-50";
+
   return (
     <div className="mx-auto max-w-[1600px]">
-      <div className="mb-3 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold capitalize">
-          {fmtMonthYear(monthStart)}
-        </h1>
-        <ViewToggle view="maaned" />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0">
           <MonthCalendar
             monthStartISO={monthStart.toISOString()}
             events={events}
+            header={
+              <>
+                <div className="flex items-center gap-2">
+                  <Link href={`/kalender?view=maaned&m=${offset - 1}`} className={arrow}>
+                    ←
+                  </Link>
+                  <Link href={`/kalender?view=maaned&m=${offset + 1}`} className={arrow}>
+                    →
+                  </Link>
+                  <h1 className="ml-1 text-lg font-semibold capitalize">
+                    {fmtMonthYear(monthStart)}
+                  </h1>
+                  {offset !== 0 && (
+                    <Link
+                      href="/kalender?view=maaned&m=0"
+                      className="ml-1 text-sm text-blue-600 underline"
+                    >
+                      I dag
+                    </Link>
+                  )}
+                </div>
+                <ViewToggle view="maaned" />
+              </>
+            }
           />
           <MonthStrip
             year={year}
@@ -146,19 +166,6 @@ export default async function KalenderPage({
             nowYear={now.getFullYear()}
             nowMonth={now.getMonth()}
           />
-          <nav className="mt-4 flex items-center justify-center gap-3 text-sm">
-            <Link href={`/kalender?view=maaned&m=${offset - 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
-              ← Forrige måned
-            </Link>
-            {offset !== 0 && (
-              <Link href="/kalender?view=maaned&m=0" className="text-blue-600 underline">
-                I dag
-              </Link>
-            )}
-            <Link href={`/kalender?view=maaned&m=${offset + 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
-              Næste måned →
-            </Link>
-          </nav>
         </div>
 
         <aside className="lg:sticky lg:top-6 lg:self-start">

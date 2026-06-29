@@ -8,13 +8,45 @@ const DOT: Record<string, string> = {
   slate: "bg-slate-400",
 };
 
+const LABEL_PILL: Record<string, string> = {
+  Vej: "bg-blue-100 text-blue-700",
+  Manøvrebane: "bg-amber-100 text-amber-700",
+  Glatbane: "bg-violet-100 text-violet-700",
+  Teori: "bg-emerald-100 text-emerald-700",
+};
+
 // Sidepanel: alle bookinger i den viste måned.
 export default function MonthBookings({ events }: { events: CalEvent[] }) {
+  const counts: Record<string, number> = {};
+  for (const e of events) {
+    const k = e.subtitle ?? "Andet";
+    counts[k] = (counts[k] ?? 0) + 1;
+  }
+
   return (
     <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold text-neutral-700">
-        Månedens bookinger ({events.length})
-      </h2>
+      <div className="mb-1 flex items-baseline gap-2">
+        <span className="text-3xl font-semibold tabular-nums">
+          {events.length}
+        </span>
+        <h2 className="text-sm font-semibold text-neutral-700">
+          bookinger denne måned
+        </h2>
+      </div>
+      {events.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          {Object.entries(counts).map(([label, n]) => (
+            <span
+              key={label}
+              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                LABEL_PILL[label] ?? "bg-neutral-100 text-neutral-600"
+              }`}
+            >
+              {n} {label}
+            </span>
+          ))}
+        </div>
+      )}
       {events.length === 0 ? (
         <p className="text-sm text-neutral-400">Ingen bookinger denne måned.</p>
       ) : (
