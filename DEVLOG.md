@@ -5,6 +5,16 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — Opret hold som wizard på egen side
+
+"Opret hold" var en altid-synlig inline-formular på `/hold`. Flyttet til en
+flertrins **wizard** på `/hold/nyt` (Navn → Teoriplan → Elever), tilgået via en
+"+ Opret hold"-knap. `/hold` er nu en ren oversigt: holdene som responsivt grid
+(op til 4 kolonner). Wizard'en tilmelder også valgte elever (addMember) efter
+oprettelse. `CreateClassForm` slettet (afløst).
+
+---
+
 ## 2026-06-29 — /hold bruger fuld bredde
 
 `/hold` var klemt i en `max-w-xl`-kolonne. Nu to-kolonne på desktop: opret-form
