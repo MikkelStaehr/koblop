@@ -5,6 +5,16 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — /hold bruger fuld bredde
+
+`/hold` var klemt i en `max-w-xl`-kolonne. Nu to-kolonne på desktop: opret-form
+til venstre (`minmax(0,420px)`), holdene som responsivt grid til højre
+(`sm:grid-cols-2 xl:grid-cols-3`), centreret med `max-w-[1400px]`. Stakker på
+mobil (mobile-first). Øvrige form-/detalje-sider bruger stadig smal kolonne
+bevidst (læsbarhed) — kan udvides hvis ønsket.
+
+---
+
 ## 2026-06-29 — Slet hold (manglende UI-knap)
 
 `deleteClass`-action fandtes, men var aldrig koblet til UI'et — så man kunne ikke
