@@ -5,6 +5,16 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — Slet hold (manglende UI-knap)
+
+`deleteClass`-action fandtes, men var aldrig koblet til UI'et — så man kunne ikke
+slette et hold. Tilføjet `DeleteClassButton` (to-trins bekræftelse) øverst på
+`/hold/[id]`; sletning fjerner hold + medlemmer + teorigange + fremmøde via FK
+cascade. `deleteClass` revaliderer nu også `/kalender` + forsiden, så holdets
+teorigange forsvinder fra kalenderen. Build + typecheck grønne.
+
+---
+
 ## 2026-06-29 — Teorihold: fast ugentlig rytme → auto-genererede teorigange
 
 Når et hold oprettes kan man nu vælge en fast ugentlig teori-rytme (ugedag, tid,
