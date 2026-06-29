@@ -11,15 +11,21 @@ import {
   dbWeekdayToMonday,
   fmtTime,
 } from "@/lib/dates";
-import type { CalEvent, AvailabilityBand, EventTone } from "@/lib/queries/dashboard";
+import type {
+  CalEvent,
+  AvailabilityBand,
+  EventTone,
+} from "@/lib/queries/dashboard";
 
+// Dæmpet kalender-stil: lys baggrund, farveaccent i venstre kant.
 const TONE: Record<EventTone, string> = {
-  blue: "bg-blue-500/90 text-white border-blue-600",
-  green: "bg-emerald-500/90 text-white border-emerald-600",
-  amber: "bg-amber-400/90 text-amber-950 border-amber-500",
-  slate: "bg-slate-400/90 text-white border-slate-500",
+  blue: "bg-blue-50 text-blue-900 border-l-blue-500",
+  green: "bg-emerald-50 text-emerald-900 border-l-emerald-500",
+  amber: "bg-amber-50 text-amber-900 border-l-amber-500",
+  slate: "bg-slate-50 text-slate-800 border-l-slate-400",
 };
 
+const ROW_H = 56; // px pr. time
 const HOURS = Array.from(
   { length: CAL_END_HOUR - CAL_START_HOUR + 1 },
   (_, i) => CAL_START_HOUR + i,
@@ -35,7 +41,7 @@ export default function WeekCalendar({
   availability?: AvailabilityBand[];
 }) {
   const weekStart = useMemo(() => new Date(weekStartISO), [weekStartISO]);
-  const today = new Date();
+  const now = new Date();
 
   const bandsByDay = useMemo(() => {
     const map: Record<number, AvailabilityBand[]> = {};
@@ -63,37 +69,52 @@ export default function WeekCalendar({
     return Math.max(0, Math.min(1, (mins - start) / total));
   }
 
+  // "Nu"-indikatoren — kun hvis i dag ligger i den viste uge og inden for tidsrum.
+  const todayCol = mondayIndex(now);
+  const inThisWeek =
+    now >= weekStart && now < addDays(weekStart, 7);
+  const nowFrac = dayFraction(now);
+  const showNow = inThisWeek && nowFrac > 0 && nowFrac < 1;
+
+  const gridH = (HOURS.length - 1) * ROW_H;
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
-      <div className="w-full min-w-[640px]">
+    <div className="overflow-x-auto rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <div className="w-full min-w-[680px]">
         {/* Dag-overskrifter */}
-        <div className="grid grid-cols-[44px_repeat(7,1fr)] border-b border-neutral-200">
+        <div className="grid grid-cols-[52px_repeat(7,1fr)] border-b border-neutral-200">
           <div />
           {DAY_LABELS.map((label, i) => {
             const date = addDays(weekStart, i);
-            const isToday = date.toDateString() === today.toDateString();
+            const isToday = date.toDateString() === now.toDateString();
             return (
-              <div
-                key={i}
-                className={`px-1 py-2 text-center text-xs ${
-                  isToday ? "font-semibold text-blue-600" : "text-neutral-500"
-                }`}
-              >
-                <div>{label}</div>
-                <div className="text-[13px]">{date.getDate()}</div>
+              <div key={i} className="px-1 py-2.5 text-center">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+                  {label}
+                </div>
+                <div
+                  className={`mx-auto mt-1 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${
+                    isToday
+                      ? "bg-neutral-900 text-white"
+                      : "text-neutral-700"
+                  }`}
+                >
+                  {date.getDate()}
+                </div>
               </div>
             );
           })}
         </div>
 
         {/* Tids-grid */}
-        <div className="relative grid grid-cols-[44px_repeat(7,1fr)]">
+        <div className="grid grid-cols-[52px_repeat(7,1fr)]">
           {/* Tidskolonne */}
-          <div className="relative">
-            {HOURS.map((h) => (
+          <div className="relative" style={{ height: gridH }}>
+            {HOURS.slice(0, -1).map((h, i) => (
               <div
                 key={h}
-                className="h-12 border-b border-neutral-100 pr-1 text-right text-[10px] text-neutral-400"
+                className="absolute right-1.5 -translate-y-1/2 text-[10px] tabular-nums text-neutral-400"
+                style={{ top: i * ROW_H }}
               >
                 {h}:00
               </div>
@@ -104,25 +125,32 @@ export default function WeekCalendar({
           {DAY_LABELS.map((_, dayIdx) => {
             const dayEvents = eventsByDay[dayIdx] ?? [];
             const bands = bandsByDay[dayIdx] ?? [];
+            const isToday = dayIdx === todayCol && inThisWeek;
             return (
               <div
                 key={dayIdx}
-                className="relative border-l border-neutral-100"
-                style={{ height: `${HOURS.length * 3}rem` }}
+                className={`relative border-l border-neutral-100 ${
+                  isToday ? "bg-neutral-50/60" : ""
+                }`}
+                style={{ height: gridH }}
               >
-                {/* Times-streger */}
-                {HOURS.map((h) => (
-                  <div key={h} className="h-12 border-b border-neutral-100" />
+                {/* Time-linjer */}
+                {HOURS.slice(0, -1).map((h, i) => (
+                  <div
+                    key={h}
+                    className="absolute inset-x-0 border-t border-neutral-100"
+                    style={{ top: i * ROW_H }}
+                  />
                 ))}
 
-                {/* Tilgængelighed (svag baggrund) */}
+                {/* Tilgængelighed */}
                 {bands.map((b, i) => {
                   const top = hhmmFraction(b.start) * 100;
                   const bottom = hhmmFraction(b.end) * 100;
                   return (
                     <div
                       key={`av-${i}`}
-                      className="absolute inset-x-0.5 rounded bg-blue-50"
+                      className="absolute inset-x-1 rounded-md bg-blue-50/70"
                       style={{ top: `${top}%`, height: `${bottom - top}%` }}
                     />
                   );
@@ -135,23 +163,35 @@ export default function WeekCalendar({
                   const top = dayFraction(start) * 100;
                   const height = Math.max(
                     (dayFraction(end) - dayFraction(start)) * 100,
-                    6,
+                    7,
                   );
                   return (
                     <div
                       key={e.id}
-                      className={`absolute inset-x-0.5 overflow-hidden rounded-md border px-1 py-0.5 text-[10px] leading-tight shadow-sm ${TONE[e.tone]}`}
+                      className={`absolute inset-x-1 overflow-hidden rounded-md border-l-[3px] px-1.5 py-1 text-[11px] leading-tight shadow-sm ${TONE[e.tone]}`}
                       style={{ top: `${top}%`, height: `${height}%` }}
-                      title={`${e.title} ${fmtTime(start)}–${fmtTime(end)}`}
+                      title={`${e.title} · ${fmtTime(start)}–${fmtTime(end)}`}
                     >
-                      <div className="font-medium">{fmtTime(start)}</div>
                       <div className="truncate font-semibold">{e.title}</div>
-                      {e.subtitle && (
-                        <div className="truncate opacity-90">{e.subtitle}</div>
-                      )}
+                      <div className="truncate opacity-70">
+                        {fmtTime(start)}
+                        {e.subtitle ? ` · ${e.subtitle}` : ""}
+                      </div>
                     </div>
                   );
                 })}
+
+                {/* "Nu"-linje */}
+                {isToday && showNow && (
+                  <div
+                    className="absolute inset-x-0 z-10"
+                    style={{ top: `${nowFrac * 100}%` }}
+                  >
+                    <div className="relative border-t-2 border-red-500">
+                      <div className="absolute -left-1 -top-[5px] h-2 w-2 rounded-full bg-red-500" />
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}

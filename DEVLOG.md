@@ -5,6 +5,32 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — UX-fase start: kalender-redesign
+
+To DB-bogføringsfixes + start på UX-fasen.
+
+**Migrations-historik repareret:** de tre nyeste migrationer (teorihold,
+teorihold_rls_fix, school_update_staff) var anvendt på live-DB men IKKE
+registreret i `supabase_migrations`. `db push` fejlede derfor med
+"relation classes already exists". Introspektion bekræftede at ALLE objekter
+(4 hold-tabeller, 3 rls-funktioner, `school_update_staff`-policy) findes →
+kørte `migration repair --status applied` for de tre. Local == Remote nu.
+Ren DB-side rettelse, intet i git.
+
+**Kalender-redesign (`WeekCalendar`):** væk fra det "grimme" grid mod et rent
+kalender-look — uændrede props/data:
+- Dato-pille i header (i dag = sort fyldt cirkel), lyse gridlinjer, i-dag-kolonne
+  med svag tint.
+- Events: dæmpet baggrund + farveaccent i venstre kant (i stedet for mættet
+  fyld), tid + undertitel.
+- Rød **"nu"-linje** når i dag ligger i den viste uge.
+- Tilgængelighed som blød afrundet baggrund. Højere timerækker (56px) for læsbarhed.
+
+Build + typecheck grønne. Mangler: visuel finpudsning efter feedback; samme
+løft til resten af fladerne.
+
+---
+
 ## 2026-06-27 — Milepæl: funktionel base færdig → næste fase er UX/UI
 
 Den funktionelle kerne står nu komplet og verificeret mod live-DB:
