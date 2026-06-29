@@ -33,7 +33,11 @@ export default function ScheduleModal({
       students[0]?.lessonId ??
       "",
   );
-  const [date, setDate] = useState(() => toDateInput(new Date(dateISO)));
+  const todayStr = toDateInput(new Date());
+  const [date, setDate] = useState(() => {
+    const clicked = toDateInput(new Date(dateISO));
+    return clicked < todayStr ? todayStr : clicked; // kan ikke booke i fortiden
+  });
   const [slots, setSlots] = useState<string[]>([]);
   const [slot, setSlot] = useState<string | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -109,6 +113,7 @@ export default function ScheduleModal({
               <input
                 type="date"
                 value={date}
+                min={todayStr}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2"
               />
