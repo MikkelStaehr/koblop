@@ -5,6 +5,32 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — Højreklik i kalenderen: planlæg / aflys / ombook
+
+Kontekstmenu på måneds-kalenderen (kørelærer):
+- **Højreklik på en dag** → "Planlæg køretime…" → modal: vælg elev (kun elever
+  med en ledig køretime i deres aktuelle modul), dato, og en ledig tid → booker.
+- **Højreklik på en booking** → "Aflys booking" (trigger frigiver tiden igen) og
+  "Ombook…" (aflys + åbn planlæg med det samme).
+
+Nye dele:
+- `getSchedulableStudents` (queries/schedule): aktive elever hvis aktuelle modul
+  har en ledig praksislektion (teori taget).
+- Server actions (actions/schedule): `getDaySlots(dateISO)` (lærerens ledige
+  45-min slots minus optaget via `instructor_busy`) og `staffScheduleBooking`
+  (lærer-initieret booking; RLS tillader staff-insert i egen skole).
+- `ContextMenu`, `ScheduleModal`, `MonthCalendarInteractive` (wrapper der lægger
+  højreklik + menu + modal oven på `MonthCalendar`). `CalEvent.bookingId` sat for
+  aktive bookinger så de kan aflyses fra kalenderen.
+- Kun staff får interaktioner; elever booker fortsat via /book.
+
+**Verificeret mod live DB som lærer:** staff-insert (RLS) → lektion blev
+`planlagt`; aflys → `ikke_planlagt`. Testdata ryddet. Build + typecheck grønne.
+
+**Næste:** samme højreklik i uge-visningen; evt. drag-flyt som rigtig ombooking.
+
+---
+
 ## 2026-06-29 — Fuld bredde + månedens bookinger ved siden af
 
 - AppShell-indhold bruger nu **fuld browserbredde** (fjernet `max-w-7xl`-cap),

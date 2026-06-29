@@ -15,10 +15,14 @@ export default function MonthCalendar({
   monthStartISO,
   events,
   header,
+  onContextDay,
+  onContextEvent,
 }: {
   monthStartISO: string;
   events: CalEvent[];
   header?: ReactNode;
+  onContextDay?: (dateISO: string, e: React.MouseEvent) => void;
+  onContextEvent?: (event: CalEvent, e: React.MouseEvent) => void;
 }) {
   const monthStart = useMemo(() => new Date(monthStartISO), [monthStartISO]);
   const gridStart = useMemo(() => startOfWeek(monthStart), [monthStart]);
@@ -65,7 +69,10 @@ export default function MonthCalendar({
           return (
             <div
               key={i}
+              onContextMenu={(me) => onContextDay?.(d.toISOString(), me)}
               className={`min-h-[116px] border-b border-r border-neutral-100 p-1.5 ${
+                onContextDay ? "cursor-context-menu" : ""
+              } ${
                 !inMonth
                   ? "bg-neutral-50/60"
                   : weekend
@@ -85,16 +92,17 @@ export default function MonthCalendar({
                 {d.getDate()}
               </div>
               <div className="flex flex-col gap-1">
-                {shown.map((e) => (
+                {shown.map((ev) => (
                   <div
-                    key={e.id}
-                    className={`truncate rounded px-1.5 py-0.5 text-[11px] ${CHIP[e.tone]}`}
-                    title={`${fmtTime(new Date(e.start))} · ${e.title}`}
+                    key={ev.id}
+                    onContextMenu={(me) => onContextEvent?.(ev, me)}
+                    className={`truncate rounded px-1.5 py-0.5 text-[11px] ${CHIP[ev.tone]}`}
+                    title={`${fmtTime(new Date(ev.start))} · ${ev.title}`}
                   >
                     <span className="tabular-nums opacity-70">
-                      {fmtTime(new Date(e.start))}
+                      {fmtTime(new Date(ev.start))}
                     </span>{" "}
-                    {e.title}
+                    {ev.title}
                   </div>
                 ))}
                 {extra > 0 && (

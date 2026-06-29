@@ -18,6 +18,7 @@ export interface CalEvent {
   title: string;
   subtitle?: string;
   tone: EventTone;
+  bookingId?: string; // sat for rigtige (aktive) bookinger → kan aflyses
 }
 
 export interface AvailabilityBand {
@@ -219,6 +220,7 @@ export async function getRangeEvents(
         : (b.enrollment?.student?.full_name ?? "Elev"),
     subtitle: b.lesson ? venueShort(b.lesson.venue) : undefined,
     tone: b.status === "completed" ? "green" : "blue",
+    bookingId: b.status === "booked" ? b.id : undefined,
   }));
 }
 

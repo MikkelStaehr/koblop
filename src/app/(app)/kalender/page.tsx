@@ -18,9 +18,11 @@ import {
   fmtDayMonth,
 } from "@/lib/dates";
 import MonthCalendar from "@/components/MonthCalendar";
+import MonthCalendarInteractive from "@/components/MonthCalendarInteractive";
 import MonthStrip from "@/components/MonthStrip";
 import MonthBookings from "@/components/MonthBookings";
 import WeekCalendar from "@/components/WeekCalendar";
+import { getSchedulableStudents } from "@/lib/queries/schedule";
 
 type Role = "student" | "instructor" | "admin";
 
@@ -109,7 +111,8 @@ export default async function KalenderPage({
   const gridEnd = addDays(gridStart, 42);
   const now = new Date();
   const year = monthStart.getFullYear();
-  const [events, summary] = await Promise.all([
+  const isStaff = role !== "student";
+  const [events, summary, schedulable] = await Promise.all([
     getRangeEvents(
       ctx.userId,
       role,
@@ -117,6 +120,7 @@ export default async function KalenderPage({
       gridEnd.toISOString(),
     ),
     getYearSummary(ctx.userId, role, year),
+    isStaff ? getSchedulableStudents() : Promise.resolve([]),
   ]);
 
   const monthEvents = events.filter((e) => {
@@ -127,38 +131,49 @@ export default async function KalenderPage({
   const arrow =
     "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-300 text-neutral-600 hover:bg-neutral-50";
 
+  const calHeader = (
+    <>
+      <div className="flex items-center gap-2">
+        <Link href={`/kalender?view=maaned&m=${offset - 1}`} className={arrow}>
+          ←
+        </Link>
+        <Link href={`/kalender?view=maaned&m=${offset + 1}`} className={arrow}>
+          →
+        </Link>
+        <h1 className="ml-1 text-lg font-semibold capitalize">
+          {fmtMonthYear(monthStart)}
+        </h1>
+        {offset !== 0 && (
+          <Link
+            href="/kalender?view=maaned&m=0"
+            className="ml-1 text-sm text-blue-600 underline"
+          >
+            I dag
+          </Link>
+        )}
+      </div>
+      <ViewToggle view="maaned" />
+    </>
+  );
+
   return (
     <div className="mx-auto max-w-[1600px]">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0">
-          <MonthCalendar
-            monthStartISO={monthStart.toISOString()}
-            events={events}
-            header={
-              <>
-                <div className="flex items-center gap-2">
-                  <Link href={`/kalender?view=maaned&m=${offset - 1}`} className={arrow}>
-                    ←
-                  </Link>
-                  <Link href={`/kalender?view=maaned&m=${offset + 1}`} className={arrow}>
-                    →
-                  </Link>
-                  <h1 className="ml-1 text-lg font-semibold capitalize">
-                    {fmtMonthYear(monthStart)}
-                  </h1>
-                  {offset !== 0 && (
-                    <Link
-                      href="/kalender?view=maaned&m=0"
-                      className="ml-1 text-sm text-blue-600 underline"
-                    >
-                      I dag
-                    </Link>
-                  )}
-                </div>
-                <ViewToggle view="maaned" />
-              </>
-            }
-          />
+          {isStaff ? (
+            <MonthCalendarInteractive
+              monthStartISO={monthStart.toISOString()}
+              events={events}
+              header={calHeader}
+              students={schedulable}
+            />
+          ) : (
+            <MonthCalendar
+              monthStartISO={monthStart.toISOString()}
+              events={events}
+              header={calHeader}
+            />
+          )}
           <MonthStrip
             year={year}
             summary={summary}
