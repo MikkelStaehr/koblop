@@ -5,6 +5,16 @@ fremskridt og hvorfor tingene er som de er. Nyeste øverst.
 
 ---
 
+## 2026-06-29 — Måneds-stribe under kalenderen
+
+Vandret stribe under måneds-kalenderen (`MonthStrip`): årets 12 måneder som
+klikbare kort der hopper til måneden (`?m=offset` beregnet ift. dags dato).
+Under hvert månedsnavn vises farvede piller med antal bookinger pr. type
+(Vej=blå, Manøvre=gul, Glat=violet, Teori=grøn). Drevet af ny `getYearSummary`
+(aggregerer årets bookinger pr. måned pr. venue). Vises kun i måneds-visning.
+
+---
+
 ## 2026-06-29 — Kalender: måneds-visning (planlægning) vs 7-dages (overblik)
 
 Klargjorde rollerne efter kundefeedback ("du blandede tingene sammen"):

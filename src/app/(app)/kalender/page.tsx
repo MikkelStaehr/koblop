@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAuthContext } from "@/lib/auth";
 import {
   getRangeEvents,
+  getYearSummary,
   getInstructorDashboard,
   getStudentDashboard,
   type CalEvent,
@@ -17,6 +18,7 @@ import {
   fmtDayMonth,
 } from "@/lib/dates";
 import MonthCalendar from "@/components/MonthCalendar";
+import MonthStrip from "@/components/MonthStrip";
 import WeekCalendar from "@/components/WeekCalendar";
 
 type Role = "student" | "instructor" | "admin";
@@ -104,12 +106,17 @@ export default async function KalenderPage({
   const monthStart = startOfMonth(addMonths(new Date(), offset));
   const gridStart = startOfWeek(monthStart);
   const gridEnd = addDays(gridStart, 42);
-  const events = await getRangeEvents(
-    ctx.userId,
-    role,
-    gridStart.toISOString(),
-    gridEnd.toISOString(),
-  );
+  const now = new Date();
+  const year = monthStart.getFullYear();
+  const [events, summary] = await Promise.all([
+    getRangeEvents(
+      ctx.userId,
+      role,
+      gridStart.toISOString(),
+      gridEnd.toISOString(),
+    ),
+    getYearSummary(ctx.userId, role, year),
+  ]);
 
   return (
     <div>
@@ -120,6 +127,13 @@ export default async function KalenderPage({
         <ViewToggle view="maaned" />
       </div>
       <MonthCalendar monthStartISO={monthStart.toISOString()} events={events} />
+      <MonthStrip
+        year={year}
+        summary={summary}
+        activeMonth={monthStart.getMonth()}
+        nowYear={now.getFullYear()}
+        nowMonth={now.getMonth()}
+      />
       <nav className="mt-4 flex items-center justify-center gap-3 text-sm">
         <Link href={`/kalender?view=maaned&m=${offset - 1}`} className="rounded-lg border border-neutral-300 px-3 py-1.5">
           ← Forrige måned

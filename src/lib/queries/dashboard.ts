@@ -222,6 +222,45 @@ export async function getRangeEvents(
   }));
 }
 
+// Antal bookinger pr. måned pr. lokation/type for et helt år (måneds-stribe).
+export interface MonthSummary {
+  month: number; // 0..11
+  counts: Record<string, number>; // venue -> antal
+}
+
+export async function getYearSummary(
+  userId: string,
+  role: "student" | "instructor" | "admin",
+  year: number,
+): Promise<MonthSummary[]> {
+  const supabase = await createClient();
+  const from = new Date(year, 0, 1);
+  const to = new Date(year + 1, 0, 1);
+  let q = supabase
+    .from("bookings")
+    .select(`start_at, lesson:lesson_progress!lesson_id(venue)`)
+    .neq("status", "cancelled")
+    .gte("start_at", from.toISOString())
+    .lt("start_at", to.toISOString());
+  if (role !== "student") q = q.eq("instructor_id", userId);
+
+  const { data } = await q;
+  const rows = (data ?? []) as unknown as {
+    start_at: string;
+    lesson: { venue: PracticalVenue } | null;
+  }[];
+  const months: MonthSummary[] = Array.from({ length: 12 }, (_, m) => ({
+    month: m,
+    counts: {},
+  }));
+  for (const r of rows) {
+    const m = new Date(r.start_at).getMonth();
+    const v = r.lesson?.venue ?? "vej";
+    months[m].counts[v] = (months[m].counts[v] ?? 0) + 1;
+  }
+  return months;
+}
+
 // ── Kørelærerens dashboard ────────────────────────────────────────────────
 
 interface RawEnrollment {
